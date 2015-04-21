@@ -1,57 +1,74 @@
 __author__ = 'sdelgado'
 
-from cryptography import x509
 from pycoin import ecdsa
+from OpenSSL import crypto
+from flask import Flask
+from flask import request
+app = Flask(__name__)
 
 
-def receive_message():
-    # Temporally secret exponent. This exponent represents the private key of an imaginary CS, normally it can't be known by the DCS
-    secret_exponent = int("72a9c01b36d19e32a4cad0e2ed834e0928a2f100a89d7f01e3d53ff3bf36379f", 16)
+def get_pem_data(bitcoin_address):
+    f = open(bitcoin_address + '.pem', 'r')
+    pem_data = f.read()
 
-    # Temporally message. Message should be given with the bitcoin_address from the CS each time data will be validated.
-    message = 855646545641
-    # Temporally signature. Signature should be given with the bitcoin_address from the CS each time data will be validated.
-    signature = ecdsa.sign(ecdsa.generator_secp256k1, secret_exponent, message)
-    # Temporally bitcoin address
-    bitcoin_address = ""
-
-    return {"message": message, "signature": signature, "bitcoin_address": bitcoin_address}
+    return pem_data
 
 
-def get_digital_certificate(public_key):
+def get_digital_certificate(pem_data):
     # DCS should contact either with the CS or with the ACA to get the digital cert.
     # Temporally digital cert.
-    certificate = x509.Certificate
+
+    certificate = crypto.load_certificate(crypto.FILETYPE_PEM, pem_data)
 
     return certificate
 
 
-def get_public_key(certificate):
-    # return certificate.public_key
-    # Temporally public key. Public key should be extracted from the digital certificate obtained either from the CS or from the ACA
-    public_key = "049d6b3aa77d1b3e9d82bbd2c68ba392f534d8b4258901322e60afa45d1f9f16e63fb2d231e3204ef4aedd183db8a646f02bc00abc620b3ea5f98fce8c1f9c8894"
+def get_public_key(pem_data):
+
+    data = pem_data[pem_data.find('pub:') + 4:pem_data.find('ASN1')]
+    data = data.replace(" ", "")
+    data = data.replace(":", "")
+    public_key = data.replace("\n", "")
     return public_key
 
 
-def verify_signature(bitcoin_address, message, signature):
-
-    # Public key should be get from the bitcoin address, still under construction
-    certificate = get_digital_certificate(bitcoin_address)
-    public_key = get_public_key(certificate)
+def verify_signature(public_key, message, signature):
 
     x = int(public_key[2:66], 16)
     y = int(public_key[66:], 16)
 
     v = ecdsa.verify(ecdsa.generator_secp256k1, (x, y), message, signature)
 
+    if v:
+        print 'Message signature verified'
+    else:
+        print 'Wrong message signature'
+
     assert v
 
 
-def main():
-    data = receive_message()
-    get_digital_certificate("")
-    verify_signature(data["bitcoin_address"], data["message"], data["signature"])
+def main(message, signature, bitcoin_address):
 
-if __name__ == "__main__":
-    main()
+    cs_pem_data = get_pem_data(bitcoin_address)
+    ca_pem_data = get_pem_data('cacert')
+
+    cs_certificate = get_digital_certificate(cs_pem_data)
+    ca_certificate = get_digital_certificate(ca_pem_data)
+
+    # VERIFY CA SIGNATURE
+
+    cs_public_key = get_public_key(cs_pem_data)
+    verify_signature(cs_public_key, message, signature)
+
+@app.route('/', methods=['POST'])
+def api_receive_data():
+
+    if request.headers['Content-Type'] == 'application/json':
+        # IF NO CERTIFICATE SENT
+        main(request.json["message"], request.json["signature"], request.json["bitcoin_address"])
+        return "Sensing data received"
+        # IF CERTIFICATE SENT
+
+if __name__ == '__main__':
+    app.run()
 
