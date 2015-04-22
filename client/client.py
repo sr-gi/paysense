@@ -16,3 +16,4 @@ headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
 
 r = requests.post('http://127.0.0.1:5000', data=json.dumps(data), headers=headers)
 print r.status_code, r.reason
+print r.content
