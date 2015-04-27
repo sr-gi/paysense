@@ -1,0 +1,37 @@
+#!/bin/bash
+
+
+# crea una clau RSA de $1 bits el valor que se li passa i amb el fitxer el nom que se li passa $2
+# general el fitxer csr apunt perquè la CA el certifiqui
+# i crea el certificat emès per la CA
+
+bits=$1
+nomfitxer=$2
+
+# generem dades aleatories per a la clau
+
+openssl rand -out rand.txt 200
+
+# crea una clau rsa amb l'openssl
+
+openssl ecparam -name secp256k1 -genkey -out $nomfitxer.pem -rand rand.txt
+
+rm rand.txt
+
+# mostra la clau EC per pantalla
+
+openssl ec -in $nomfitxer.pem -text -noout
+
+# crea la petició de certificat csr
+
+openssl req -new -sha256 -config openssl.conf -key $nomfitxer.pem -out $nomfitxer.csr
+
+# mostra el CSR per pantalla
+
+#openssl req -in $nomfitxer.csr -noout -text
+
+# crea el certificat a partir del csr
+
+#openssl ca -config openssl.conf -out $nomfitxer.crt -infiles $nomfitxer.csr
+
+#rm $nomfitxer.csr
