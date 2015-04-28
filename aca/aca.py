@@ -1,16 +1,37 @@
 __author__ = 'sdelgado'
 
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from base64 import b64encode
 from os import path
 import time
 from M2Crypto import X509, EC, EVP, BIO, ASN1
+from os import remove
 
 app = Flask(__name__)
 
 ACA_CERT = 'ACA/cacert.pem'
 ACA_KEY = 'ACA/private/cakey.pem'
 CS_CERTS_PATH = 'ACA/newcerts/'
+
+
+def generate_response(bitcoin_address):
+    # Get data from the pem file, and generate a response
+    f = open(bitcoin_address + '_key.pem')
+    private_key = f.read()
+    f.close()
+    f = open(bitcoin_address + '_public_key.pem')
+    public_key = f.read()
+    f.close()
+    f = open(CS_CERTS_PATH + bitcoin_address + '.pem')
+    certificate = f.read()
+    f.close()
+    data = {'public_key': public_key, 'private_key': private_key, 'certificate': certificate}
+
+    # Delete the CS keys
+    remove(bitcoin_address + '_public_key.pem')
+    remove(bitcoin_address + '_key.pem')
+
+    return data
 
 
 def store_certificate(certificate, bitcoin_address):
@@ -68,8 +89,6 @@ def generate_certificate(pkey, bitcoin_address):
 
     # Sign the certificate using the CA Private Key
     cert.sign(ca_pkey, md='sha256')
-
-    print cert.verify(ca_cert.get_pubkey())
 
     # Store certificate
     store_certificate(cert, bitcoin_address)
@@ -140,15 +159,20 @@ def api_sign_in():
     # Get the bitcoin_address from the url
     bitcoin_address = request.args.get('bitcoin_address')
     # ToDo: This must be changed. The generation of the keys should be done by the CS and it should send a CSR to be signed by the CA.
-    # ToDo: Create a CSR could be challenging for a Android device. A work around could be send the public key and the bitcoin address to the CA an let it generate the complete certificate
+    # ToDo: Create a CSR could be challenging for an Android device. A work around could be send the public key and the bitcoin address to the CA an let it generate the complete certificate.
     pk = generate_keys(bitcoin_address)
 
     # Generate the digital certificate
-    certificate = generate_certificate(pk, bitcoin_address)
-    return certificate
+    generate_certificate(pk, bitcoin_address)
+
+    # Send response to the CS
+    response = generate_response(bitcoin_address)
+
+    return jsonify(response)
 
 if __name__ == '__main__':
     app.run(port=5001)
     #bitcoin_address = "1Dn9CJJgt8fqzTdDiPvcRiA5cmnPNkx3Wxa"
     #pk = generate_keys(bitcoin_address)
     #generate_certificate(pk, bitcoin_address)
+    #response = generate_response(bitcoin_address)
