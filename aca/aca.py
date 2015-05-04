@@ -3,9 +3,11 @@ __author__ = 'sdelgado'
 from flask import Flask, request, jsonify
 from base64 import b64encode
 from os import path
-import time
 from M2Crypto import X509, EC, EVP, BIO, ASN1
 from os import remove
+from bitcointools import public_key_to_bc_address
+from binascii import b2a_hex
+import time
 
 app = Flask(__name__)
 
@@ -94,15 +96,12 @@ def generate_certificate(pkey, bitcoin_address):
     store_certificate(cert, bitcoin_address)
 
 
-def generate_keys(bitcoin_address):
+#def generate_keys(bitcoin_address):
+def generate_keys():
 
     # Generate the elliptic curve and the keys
     ec = EC.gen_params(EC.NID_secp256k1)
     ec.gen_key()
-
-    # Save both keys
-    ec.save_key(bitcoin_address + '_key.pem', None)
-    ec.save_pub_key(bitcoin_address + '_public_key.pem')
 
     # Generate a Pkey object to store the EC keys
     mem = BIO.MemoryBuffer()
@@ -110,7 +109,16 @@ def generate_keys(bitcoin_address):
     ec.save_key_bio(mem, None)
     pk = EVP.load_key_bio(mem)
 
-    return pk
+    key_der = pk.as_der()
+    key_hex = b2a_hex(key_der)
+    bitcoin_address = public_key_to_bc_address(key_hex)
+
+    # Save both keys
+    ec.save_key(bitcoin_address + '_key.pem', None)
+    ec.save_pub_key(bitcoin_address + '_public_key.pem')
+
+    #return pk
+    return pk, bitcoin_address
 
 
 def get_cs_certificate(bitcoin_address):
@@ -157,10 +165,10 @@ def api_get_ca_pem():
 @app.route('/sign_in', methods=['GET'])
 def api_sign_in():
     # Get the bitcoin_address from the url
-    bitcoin_address = request.args.get('bitcoin_address')
-    # ToDo: This must be changed. The generation of the keys should be done by the CS and it should send a CSR to be signed by the CA.
-    # ToDo: Create a CSR could be challenging for an Android device. A work around could be send the public key and the bitcoin address to the CA an let it generate the complete certificate.
-    pk = generate_keys(bitcoin_address)
+    # Todo: This is a workaround, in this first version the ACA generates either the keys and the certificate
+    #bitcoin_address = request.args.get('bitcoin_address')
+    #pk = generate_keys(bitcoin_address)
+    pk, bitcoin_address = generate_keys()
 
     # Generate the digital certificate
     generate_certificate(pk, bitcoin_address)
@@ -172,7 +180,6 @@ def api_sign_in():
 
 if __name__ == '__main__':
     app.run(port=5001)
-    #bitcoin_address = "1Dn9CJJgt8fqzTdDiPvcRiA5cmnPNkx3Wxa"
-    #pk = generate_keys(bitcoin_address)
+    #pk, bitcoin_address = generate_keys()
     #generate_certificate(pk, bitcoin_address)
     #response = generate_response(bitcoin_address)

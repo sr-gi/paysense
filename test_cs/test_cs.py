@@ -1,13 +1,13 @@
 __author__ = 'sdelgado'
 
+from base64 import b64encode
+import urllib2
 import requests
 from flask import json
-from base64 import b64encode
 from M2Crypto import EC
-import urllib2
 
-bitcoin_address = "1Dn9CJJgt8fqzTdDiPvcRiA5cmnPNkx3Wx"
-ec = EC.load_key('private_key.pem')
+bitcoin_address = "1B5m8XbnTGHvPgz2DQW1m1UuwrEHDWvDFX"
+ec = EC.load_key('paysense.key')
 
 message = '34512343291048'
 signature = ec.sign_dsa_asn1(message)
@@ -60,19 +60,19 @@ def test4():
 
 
 def test5():
-    response = urllib2.urlopen('http://127.0.0.1:5001/sign_in?bitcoin_address=' + bitcoin_address)
+    response = urllib2.urlopen('http://127.0.0.1:5001/sign_in?bitcoin_address=')
     data = json.load(response)
     public_key = data["public_key"]
     private_key = data["private_key"]
     certificate = data["certificate"]
 
-    f = open('public_key.pem', 'w')
+    f = open('paysense_public.key', 'w')
     f.write(public_key)
     f.close()
-    f = open('private_key.pem', 'w')
+    f = open('paysense.key', 'w')
     f.write(private_key)
     f.close()
-    f = open(bitcoin_address + '.pem', 'w')
+    f = open('paysense.crt', 'w')
     f.write(certificate)
     f.close()
 
