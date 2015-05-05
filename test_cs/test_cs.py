@@ -1,12 +1,17 @@
 __author__ = 'sdelgado'
 
-from base64 import b64encode
+from base64 import b64encode, b64decode
 import urllib2
+
 import requests
 from flask import json
-from M2Crypto import EC
+from M2Crypto import EC, BIO, EVP
+from bitcointools import private_key_to_wif
+from base58 import b58encode
+from binascii import *
 
-bitcoin_address = "1B5m8XbnTGHvPgz2DQW1m1UuwrEHDWvDFX"
+
+bitcoin_address = "mtSLzvNAZnrpyGW1UBkmb3ovap8myuMJrZ"
 ec = EC.load_key('paysense.key')
 
 message = '34512343291048'
@@ -28,7 +33,7 @@ def test1():
 
 def test2():
     # Request with certificate
-    f = open(bitcoin_address + '.pem', 'r')
+    f = open('paysense.crt', 'r')
     cs_pem_data = b64encode(f.read())
     f.close()
     data['cs_pem_data'] = cs_pem_data
@@ -77,12 +82,22 @@ def test5():
     f.close()
 
 
+def test6():
+    #private_key_to_wif("60E208D4FA2006500049665A52A8CD0EB77127509274A2FFD659FD15A989D0B4")
+    print b58encode(a2b_hex("6f5f329a9ff1141d2ae6f1a6cbbd55b457b7324430d676b25a"))
+    ec_pub = EC.load_pub_key("paysense_public.key")
+    signature2 = ec.sign_dsa_asn1(message)
+    print ec_pub.verify_dsa_asn1(message, signature2)
+    
+    #print b2a_hex(ec_pub.get_der())
+
 def main():
-    test1()
-    test2()
-    test3()
-    test4()
+    #test1()
+    #test2()
+    #test3()
+    #test4()
     #test5()
+    test6()
 
 if __name__ == '__main__':
     main()
