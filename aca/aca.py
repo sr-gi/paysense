@@ -181,7 +181,9 @@ def api_sign_in():
     return jsonify(response)
 
 if __name__ == '__main__':
-    #app.run(port=5001)
-    pk, bitcoin_address = generate_keys()
-    generate_certificate(pk, bitcoin_address)
+    app.run(port=5001)
+    #pk, bitcoin_address = generate_keys()
+    #bitcoin_address = 'mqcKJjxaaUcG37MFA3jvyDkaznWs4kyLyg'
+    #pk = EVP.load_key('dcs_paysense.key')
+    #generate_certificate(pk, bitcoin_address)
     #response = generate_response(bitcoin_address)

@@ -3,12 +3,13 @@ __author__ = 'sdelgado'
 from base64 import b64encode
 import urllib2
 
-import requests
+import requests, bitcointools
 from flask import json
 from M2Crypto import EC
-import bitcointools
+from pycoin import tx
 
-bitcoin_address = "mtSLzvNAZnrpyGW1UBkmb3ovap8myuMJrZ"
+
+bitcoin_address = "mpFECAZYV4dXnK2waQC36AoZsAftv5RAkM"
 ec = EC.load_key('paysense.key')
 
 message = '34512343291048'
@@ -91,12 +92,12 @@ def test6():
 
 
 def main():
-    #test1()
-    #test2()
-    #test3()
-    #test4()
+    test1()
+    test2()
+    test3()
+    test4()
     #test5()
-    test6()
+    #test6()
 
 if __name__ == '__main__':
     main()
