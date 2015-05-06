@@ -3,13 +3,12 @@ __author__ = 'sdelgado'
 from base64 import b64encode
 from os import path
 from os import remove
-from binascii import b2a_hex
 import time
 
 from flask import Flask, request, jsonify
 from M2Crypto import X509, EC, EVP, BIO, ASN1
 
-from bitcointools import public_key_to_bc_address
+from bitcointools import public_key_to_bc_address, get_pub_key_hex
 
 
 app = Flask(__name__)
@@ -112,9 +111,9 @@ def generate_keys():
     ec.save_key_bio(mem, None)
     pk = EVP.load_key_bio(mem)
 
-    key_der = pk.as_der()
-    key_hex = b2a_hex(key_der)
-    bitcoin_address = public_key_to_bc_address(key_hex, 111)
+    # Generate the bitcoin address from the public key
+    public_key_hex = get_pub_key_hex(ec.pub())
+    bitcoin_address = public_key_to_bc_address(public_key_hex, 'test')
 
     # Save both keys
     ec.save_key(bitcoin_address + '_key.pem', None)
