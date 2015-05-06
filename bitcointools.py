@@ -25,6 +25,13 @@ def hash_160_to_bc_address(h160, v):
     return b58encode(addr)
 
 
+def get_pub_key_hex(public_key):
+    der = public_key.get_der()
+    root = asn1_node_root(der)
+    key = b2a_hex(asn1_get_value(der, asn1_node_next(der, asn1_node_first_child(der, root))))
+    return key[2:]
+
+
 def public_key_to_bc_address(public_key, v=None):
     if v is 'test':
         v = TESTNET_PUBKEY_HASH
@@ -32,13 +39,6 @@ def public_key_to_bc_address(public_key, v=None):
         v = PUBKEY_HASH
     h160 = hash_160(public_key)
     return hash_160_to_bc_address(h160, v)
-
-
-def get_pub_key_hex(public_key):
-    der = public_key.get_der()
-    root = asn1_node_root(der)
-    key = b2a_hex(asn1_get_value(der, asn1_node_next(der, asn1_node_first_child(der, root))))
-    return key[2:]
 
 
 def private_key_to_wif(private_key, v=None):
