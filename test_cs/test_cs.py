@@ -3,10 +3,10 @@ __author__ = 'sdelgado'
 from base64 import b64encode
 import urllib2
 
-import requests, bitcointools
+import requests
+from bitcointools import private_key_to_wif, get_priv_key_hex, public_key_to_bc_address, get_pub_key_hex
 from flask import json
 from M2Crypto import EC
-from pycoin import tx
 
 
 bitcoin_address = "mpFECAZYV4dXnK2waQC36AoZsAftv5RAkM"
@@ -82,22 +82,22 @@ def test5():
 
 def test6():
     # Generate the bitcoin address from the public key
-    public_key_hex = bitcointools.get_pub_key_hex(ec.pub())
-    bitcoin_address = bitcointools.public_key_to_bc_address(public_key_hex, 'test')
+    public_key_hex = get_pub_key_hex(ec.pub())
+    bitcoin_address = public_key_to_bc_address(public_key_hex, 'test')
     print bitcoin_address
 
     # Generate WIF from private key
-    private_key_wif = bitcointools.private_key_to_wif("a132c58610842880c13958ad7f24dbaecdd555e9c577abd8b7e758c4d972b32b", 'test')
+    private_key_hex = get_priv_key_hex('paysense.key')
+    private_key_wif = private_key_to_wif(private_key_hex, 'test')
     print private_key_wif
 
-
 def main():
-    test1()
-    test2()
-    test3()
-    test4()
+    #test1()
+    #test2()
+    #test3()
+    #test4()
     #test5()
-    #test6()
+    test6()
 
 if __name__ == '__main__':
     main()

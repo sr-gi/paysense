@@ -4,6 +4,7 @@ import hashlib
 from base58 import b58encode
 from binascii import a2b_hex, b2a_hex
 from asn1tinydecoder import *
+from subprocess import check_output, STDOUT
 
 PUBKEY_HASH = 0
 TESTNET_PUBKEY_HASH = 111
@@ -31,6 +32,20 @@ def get_pub_key_hex(public_key):
     key = b2a_hex(asn1_get_value(der, asn1_node_next(der, asn1_node_first_child(der, root))))
     return key[2:]
 
+# ToDO: Find a way to get the SK without a system call
+def get_priv_key_hex(pk_file_path):
+
+    cmd = ['openssl', 'ec', '-in', pk_file_path, '-text', '-noout']
+    response = check_output(cmd, stderr=STDOUT)
+
+    raw_key = response[response.find('priv:') + 8: response.find('pub:')]
+    raw_key = raw_key.replace(":", "")
+    raw_key = raw_key.replace(" ", "")
+    raw_key = raw_key.replace("\n", "")
+    # ToDO: Ensure that the first two values of the SK are always 00
+    private_key_hex = raw_key[2:]
+
+    return private_key_hex
 
 def public_key_to_bc_address(public_key, v=None):
     if v is 'test':
@@ -39,7 +54,6 @@ def public_key_to_bc_address(public_key, v=None):
         v = PUBKEY_HASH
     h160 = hash_160(public_key)
     return hash_160_to_bc_address(h160, v)
-
 
 def private_key_to_wif(private_key, v=None):
     if v is 'test':
