@@ -5,11 +5,15 @@ from base58 import b58encode
 from binascii import a2b_hex, b2a_hex
 from asn1tinydecoder import *
 from subprocess import check_output, STDOUT
+from pybitcointools import make_request, blockr_fetchtx, deserialize, script_to_address, scriptaddr
+from flask import json
+
 
 PUBKEY_HASH = 0
 TESTNET_PUBKEY_HASH = 111
 WIF = 128
 TESTNET_WIF = 239
+DCS_BC_ADDRESS = 'mqcKJjxaaUcG37MFA3jvyDkaznWs4kyLyg'
 
 
 def hash_160(public_key):
@@ -69,4 +73,41 @@ def private_key_to_wif(private_key, v=None):
     wif = b58encode(wif)
     return wif
 
+def check_payers(history):
+    validation = True
+    for i in range(len(history)):
+        payer = history[i].get('from')
+        if payer is not DCS_BC_ADDRESS:
+            validation = False
+
+    return validation
+
+def tx_info(tx):
+    input_addresses = []
+    output_addresses = []
+    payments = []
+
+    response = json.loads(make_request('http://tbtc.blockr.io/api/v1/tx/info/' + tx))
+    vins = response.get('data').get('trade').get('vins')
+    vouts = response.get('data').get('trade').get('vouts')
+
+    for i in range(len(vins)):
+        input_addresses.append(vins[i].get('address'))
+    for i in range(len(vouts)):
+        output_addresses.append(vouts[i].get('address'))
+        payments.append(vouts[i].get('amount'))
+
+    return {'from': input_addresses, 'to': output_addresses, 'amount': payments}
+
+def history_testnet(bitcoin_address):
+    history = []
+    response = json.loads(make_request('http://tbtc.blockr.io/api/v1/address/txs/' + bitcoin_address))
+    if response.get('status') == 'success':
+        data = response.get('data')
+        txs = data.get('txs')
+
+        for i in range(len(txs)):
+            history.append(tx_info(txs[i].get('tx')))
+
+    return history
 

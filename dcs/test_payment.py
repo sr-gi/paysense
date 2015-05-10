@@ -1,10 +1,11 @@
 __author__ = 'sdelgado'
 from M2Crypto import EC
-from bitcointools import public_key_to_bc_address, get_pub_key_hex, get_priv_key_hex
+from bitcointools import *
 from pybitcointools import *
 
 PK_FILE = 'dcs_paysense_public.key'
 SK_FILE = 'dcs_paysense.key'
+CS_BC_ADDRESS = 'mpFECAZYV4dXnK2waQC36AoZsAftv5RAkM'
 
 def main():
     public_key = EC.load_pub_key(PK_FILE)
@@ -21,8 +22,11 @@ def main():
 
     total_bitcoins = unspent_bitcoins[0].get('value')
 
-    cs_bt_address = 'mpFECAZYV4dXnK2waQC36AoZsAftv5RAkM'
-    outs = [{'value': total_bitcoins - 1000, 'address': cs_bt_address}]
+    outs = [{'value': total_bitcoins - 1000, 'address': CS_BC_ADDRESS}]
+
+    history = history_testnet(CS_BC_ADDRESS)
+
+    print check_payers(history)
 
     tx = mktx(unspent_bitcoins, outs)
     signed_tx = sign(tx, 0, private_key_hex)
