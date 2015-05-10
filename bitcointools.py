@@ -5,7 +5,7 @@ from base58 import b58encode
 from binascii import a2b_hex, b2a_hex
 from asn1tinydecoder import *
 from subprocess import check_output, STDOUT
-from pybitcointools import make_request, blockr_fetchtx, deserialize, script_to_address, scriptaddr
+from pybitcointools import make_request
 from flask import json
 
 
@@ -13,8 +13,6 @@ PUBKEY_HASH = 0
 TESTNET_PUBKEY_HASH = 111
 WIF = 128
 TESTNET_WIF = 239
-DCS_BC_ADDRESS = 'mqcKJjxaaUcG37MFA3jvyDkaznWs4kyLyg'
-
 
 def hash_160(public_key):
     md = hashlib.new('ripemd160')
@@ -72,15 +70,6 @@ def private_key_to_wif(private_key, v=None):
     wif = e_pkey + checksum
     wif = b58encode(wif)
     return wif
-
-def check_payers(history):
-    validation = True
-    for i in range(len(history)):
-        payer = history[i].get('from')
-        if payer is not DCS_BC_ADDRESS:
-            validation = False
-
-    return validation
 
 def tx_info(tx):
     input_addresses = []

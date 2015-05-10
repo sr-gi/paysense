@@ -8,14 +8,31 @@ import time
 from flask import Flask, request, jsonify
 from M2Crypto import X509, EC, EVP, BIO, ASN1
 
-from bitcointools import public_key_to_bc_address, get_pub_key_hex
-
+from bitcointools import public_key_to_bc_address, get_pub_key_hex, history_testnet
 
 app = Flask(__name__)
 
 ACA_CERT = 'ACA/cacert.pem'
 ACA_KEY = 'ACA/private/cakey.pem'
 CS_CERTS_PATH = 'ACA/newcerts/'
+
+DCS_BC_ADDRESS = 'mqcKJjxaaUcG37MFA3jvyDkaznWs4kyLyg'
+
+def check_certificate(bitcoin_address):
+    return path.exists(CS_CERTS_PATH + bitcoin_address + '.pem')
+
+def check_payers(history, expected_payer=None):
+    validation = True
+    if expected_payer is None:
+        expected_payer = DCS_BC_ADDRESS
+    if len(history) == 0:
+        validation= False
+    for i in range(len(history)):
+        payer = history[i].get('from')
+        if payer is not expected_payer:
+            validation = False
+
+    return validation
 
 
 def generate_response(bitcoin_address):
@@ -124,7 +141,7 @@ def generate_keys():
 
 
 def get_cs_certificate(bitcoin_address):
-    if path.exists(CS_CERTS_PATH + bitcoin_address + '.pem'):
+    if check_certificate(bitcoin_address):
         f = open(CS_CERTS_PATH + bitcoin_address + '.pem')
         certificate = f.read()
         f.close()
@@ -181,9 +198,9 @@ def api_sign_in():
     return jsonify(response)
 
 if __name__ == '__main__':
-    app.run(port=5001)
+    #app.run(port=5001)
     #pk, bitcoin_address = generate_keys()
-    #bitcoin_address = 'mqcKJjxaaUcG37MFA3jvyDkaznWs4kyLyg'
-    #pk = EVP.load_key('dcs_paysense.key')
     #generate_certificate(pk, bitcoin_address)
     #response = generate_response(bitcoin_address)
+    history = history_testnet('mkhrXULTeuwdNGSKVKhR1tjCFMktT6pXFX')
+    print check_payers(history)
