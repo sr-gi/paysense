@@ -5,7 +5,7 @@ from base58 import b58encode
 from binascii import a2b_hex, b2a_hex
 from asn1tinydecoder import *
 from subprocess import check_output, STDOUT
-from pybitcointools import make_request
+from bitcoin import make_request
 from flask import json
 
 
