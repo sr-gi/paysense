@@ -69,7 +69,6 @@ def multi_payment(cs_bitcoin_address, amount, fee=None):
     private_key_2_hex = get_priv_key_hex('../test_cs/paysense_2.key')
     public_key_2_hex = get_pub_key_hex(public_key_2)
 
-
     # Get their bitcoin addresses and their unspent bitcoins
     bitcoin_address = public_key_to_bc_address(public_key_hex, 'test')
     unspent_bitcoins = blockr_unspent(bitcoin_address, 'testnet')
