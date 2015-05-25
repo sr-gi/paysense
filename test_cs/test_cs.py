@@ -8,9 +8,14 @@ from bitcointools import private_key_to_wif, get_priv_key_hex, public_key_to_bc_
 from flask import json
 from M2Crypto import EC
 
+P_KEY = 'paysense_public.key'
+S_KEY = 'paysense.key'
+CERT = 'paysense.crt'
+CS1_PATH = 'crowdSensors/reputationTest/cs1/'
+CS2_PATH = 'crowdSensors/reputationTest/cs2/'
 
 bitcoin_address = "mpFECAZYV4dXnK2waQC36AoZsAftv5RAkM"
-ec = EC.load_key('paysense.key')
+ec = EC.load_key(CS1_PATH + S_KEY)
 
 message = '34512343291048'
 signature = ec.sign_dsa_asn1(message)
@@ -31,7 +36,7 @@ def test1():
 
 def test2():
     # Request with certificate
-    f = open('paysense.crt', 'r')
+    f = open(CS1_PATH + CERT, 'r')
     cs_pem_data = b64encode(f.read())
     f.close()
     data['cs_pem_data'] = cs_pem_data
@@ -63,31 +68,33 @@ def test4():
 
 
 def test5():
+    # Register test
     response = urllib2.urlopen('http://127.0.0.1:5001/sign_in?bitcoin_address=')
     data = json.load(response)
     public_key = data["public_key"]
     private_key = data["private_key"]
     certificate = data["certificate"]
 
-    f = open('paysense_public.key', 'w')
+    f = open(P_KEY, 'w')
     f.write(public_key)
     f.close()
-    f = open('paysense.key', 'w')
+    f = open(S_KEY, 'w')
     f.write(private_key)
     f.close()
-    f = open('paysense.crt', 'w')
+    f = open(CERT, 'w')
     f.write(certificate)
     f.close()
 
 
 def test6():
+    ec = EC.load_key(CS1_PATH + S_KEY)
     # Generate the bitcoin address from the public key
     public_key_hex = get_pub_key_hex(ec.pub())
     bitcoin_address = public_key_to_bc_address(public_key_hex, 'test')
     print bitcoin_address
 
     # Generate WIF from private key
-    private_key_hex = get_priv_key_hex('paysense.key')
+    private_key_hex = get_priv_key_hex(CS1_PATH + S_KEY)
     private_key_wif = private_key_to_wif(private_key_hex, 'test')
     print private_key_wif
 

@@ -3,8 +3,12 @@ from M2Crypto import EC
 from bitcointools import *
 from bitcoin import *
 
-PK_FILE = 'dcs_paysense_public.key'
-SK_FILE = 'dcs_paysense.key'
+CS1_PATH = '../test_cs/crowdSensors/transactionTest/cs1/'
+CS2_PATH = '../test_cs/crowdSensors/transactionTest/cs2/'
+
+S_KEY = 'paysense.key'
+P_KEY = 'paysense_public.key'
+
 CS_BC_ADDRESS = 'mpFECAZYV4dXnK2waQC36AoZsAftv5RAkM'
 CS2_BC_ADDRESS = 'mkhrXULTeuwdNGSKVKhR1tjCFMktT6pXFX'
 
@@ -23,10 +27,10 @@ def single_payment(cs_bitcoin_address, amount, fee=None):
         fee = 1000
 
     # Load the public key from the key file
-    public_key = EC.load_pub_key(PK_FILE)
+    public_key = EC.load_pub_key(P_KEY)
 
     # Get both public and private key in their hex representation
-    private_key_hex = get_priv_key_hex(SK_FILE)
+    private_key_hex = get_priv_key_hex(S_KEY)
     public_key_hex = get_pub_key_hex(public_key)
 
     # Get the bitcoin address from the public key
@@ -59,14 +63,14 @@ def multi_payment(cs_bitcoin_address, amount, fee=None):
         fee = 1000
 
     # Load both public keys
-    public_key = EC.load_pub_key(PK_FILE)
-    public_key_2 = EC.load_pub_key('../test_cs/paysense_2_public.key')
+    public_key = EC.load_pub_key(P_KEY)
+    public_key_2 = EC.load_pub_key(CS2_PATH + P_KEY)
 
     # Get the hex representation of the keys from both the DCS and the CS2
-    private_key_hex = get_priv_key_hex(SK_FILE)
+    private_key_hex = get_priv_key_hex(S_KEY)
     public_key_hex = get_pub_key_hex(public_key)
 
-    private_key_2_hex = get_priv_key_hex('../test_cs/paysense_2.key')
+    private_key_2_hex = get_priv_key_hex(CS2_PATH + S_KEY)
     public_key_2_hex = get_pub_key_hex(public_key_2)
 
     # Get their bitcoin addresses and their unspent bitcoins
