@@ -1,0 +1,38 @@
+Certificate:
+    Data:
+        Version: 1 (0x0)
+        Serial Number: 0 (0x0)
+    Signature Algorithm: sha256WithRSAEncryption
+        Issuer: C=CT, ST=Barcelona, L=Bellaterra, O=PaySense, OU=ACA, CN=ACA/emailAddress=aca@deic.uab.cat
+        Validity
+            Not Before: May  6 13:53:58 2015 GMT
+            Not After : May  5 13:53:58 2016 GMT
+        Subject: C=CA, ST=Barcelona, L=Bellaterra, O=UAB, OU=DEIC, CN=mqcKJjxaaUcG37MFA3jvyDkaznWs4kyLyg
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: (256 bit)
+                pub: 
+                    04:f8:cb:80:a6:86:00:94:a9:ea:e3:5c:30:d3:54:
+                    f9:09:70:e8:56:f0:f4:e7:c5:71:73:f2:ce:22:c2:
+                    fa:4b:be:1f:43:34:f7:74:d7:52:d3:2c:aa:11:8f:
+                    65:4a:af:b5:6a:13:03:a6:c9:ee:68:df:7e:b0:16:
+                    13:06:af:90:0c
+                ASN1 OID: secp256k1
+    Signature Algorithm: sha256WithRSAEncryption
+         51:96:af:6b:01:a9:61:6e:45:60:17:7f:56:35:39:d4:2a:1e:
+         be:9d:a2:01:61:da:bb:aa:27:45:cc:a3:03:94:b0:a2:0d:f1:
+         44:67:95:63:49:9b:7b:e5:34:4b:5b:85:c9:96:3f:6d:64:30:
+         0f:ac:b6:5c:ed:de:7b:7b:3a:36
+-----BEGIN CERTIFICATE-----
+MIIB7DCCAZYCAQAwDQYJKoZIhvcNAQELBQAwgYYxCzAJBgNVBAYTAkNUMRIwEAYD
+VQQIEwlCYXJjZWxvbmExEzARBgNVBAcTCkJlbGxhdGVycmExETAPBgNVBAoTCFBh
+eVNlbnNlMQwwCgYDVQQLEwNBQ0ExDDAKBgNVBAMTA0FDQTEfMB0GCSqGSIb3DQEJ
+ARYQYWNhQGRlaWMudWFiLmNhdDAeFw0xNTA1MDYxMzUzNThaFw0xNjA1MDUxMzUz
+NThaMIGAMQswCQYDVQQGEwJDQTESMBAGA1UECAwJQmFyY2Vsb25hMRMwEQYDVQQH
+DApCZWxsYXRlcnJhMQwwCgYDVQQKDANVQUIxDTALBgNVBAsMBERFSUMxKzApBgNV
+BAMMIm1xY0tKanhhYVVjRzM3TUZBM2p2eURrYXpuV3M0a3lMeWcwVjAQBgcqhkjO
+PQIBBgUrgQQACgNCAAT4y4CmhgCUqerjXDDTVPkJcOhW8PTnxXFz8s4iwvpLvh9D
+NPd011LTLKoRj2VKr7VqEwOmye5o336wFhMGr5AMMA0GCSqGSIb3DQEBCwUAA0EA
+UZavawGpYW5FYBd/VjU51Coevp2iAWHau6onRcyjA5Swog3xRGeVY0mbe+U0S1uF
+yZY/bWQwD6y2XO3ee3s6Ng==
+-----END CERTIFICATE-----

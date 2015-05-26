@@ -239,8 +239,3 @@ def api_verify_reputation_exchange():
 
 if __name__ == '__main__':
     app.run(port=5001)
-    #pk, bitcoin_address = generate_keys()
-    #generate_certificate(pk, bitcoin_address)
-    #response = generate_response(bitcoin_address)
-    #history = history_testnet('mkhrXULTeuwdNGSKVKhR1tjCFMktT6pXFX')
-    #print check_payers(history)

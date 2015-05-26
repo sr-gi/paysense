@@ -3,31 +3,19 @@ from M2Crypto import EC
 from bitcointools import *
 from bitcoin import *
 
-def single_payment(p_key, s_key, cs_bitcoin_address, amount, fee=None):
+def single_payment(s_key, own_bc_address, cs_bc_address, amount, outside_bc_address, outside_amount, fee=None):
     # Set the default fee
     if fee is None:
         fee = 1000
 
-    # Load the public key from the key file
-    public_key = EC.load_pub_key(p_key)
-
     # Get both public and private key in their hex representation
     private_key_hex = get_priv_key_hex(s_key)
-    public_key_hex = get_pub_key_hex(public_key)
-
-    # Get the bitcoin address from the public key
-    bitcoin_address = public_key_to_bc_address(public_key_hex, 'test')
 
     # Check the unspent bitcoins from that address
-    unspent_bitcoins = blockr_unspent(bitcoin_address, 'testnet')
-
-    # Parse the total unspent bitcoins
-    total_bitcoins = unspent_bitcoins[0].get('value')
-
-    print 'Total DCS Bitcoins ' + str(total_bitcoins)
+    unspent_bitcoins = blockr_unspent(own_bc_address, 'testnet')
 
     # Build the output of the payment
-    outs = [{'value': amount, 'address': cs_bitcoin_address}, {'value': total_bitcoins - amount - fee, 'address': bitcoin_address}]
+    outs = [{'value': amount - outside_amount - fee, 'address': cs_bc_address}, {'value': outside_amount, 'address': outside_bc_address}]
 
     # Build the transaction
     tx = mktx(unspent_bitcoins, outs)

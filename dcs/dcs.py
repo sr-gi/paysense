@@ -4,6 +4,7 @@ from M2Crypto import X509, EC
 from flask import Flask, request
 import urllib2
 from base64 import b64decode
+
 app = Flask(__name__)
 
 
@@ -22,7 +23,6 @@ def get_ca_pem_data():
 
 
 def verify_data(message, signature, bitcoin_address, cs_pem_data=None):
-
     if cs_pem_data is None:
         # Get CS from the ACA (pem data base64 encoded)
         cs_pem_data = get_cs_pem_data(bitcoin_address)
@@ -43,9 +43,9 @@ def verify_data(message, signature, bitcoin_address, cs_pem_data=None):
 
     return {'ca': ca_verify, 'cs': cs_verify}
 
+
 @app.route('/', methods=['POST'])
 def api_receive_data():
-
     if request.headers['Content-Type'] == 'application/json':
         message = str(request.json.get("message"))
         signature = str(request.json.get("signature"))
@@ -70,6 +70,6 @@ def api_receive_data():
 
     return response
 
+
 if __name__ == '__main__':
     app.run()
-    #response = verify_data('34512343291048', b64decode('MEUCIQCIP1h52JbbKZ5tf7O3NXNZ4HHFC0sEwj/WMOoPZWO+0wIgZljKZwl1QsBC/nlexju+4UfyfHwFOfM3PDad+H5u/UU='), '1Dn9CJJgt8fqzTdDiPvcRiA5cmnPNkx3Wx')

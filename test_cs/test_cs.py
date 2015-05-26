@@ -9,6 +9,7 @@ from bitcointransactions import single_payment
 from flask import json
 from M2Crypto import EC
 from bitcoin import blockr_unspent
+from random import randint
 
 P_KEY = 'paysense_public.key'
 S_KEY = 'paysense.key'
@@ -136,12 +137,18 @@ def self_reputation_exchange(new_bc_address):
 
     assert json.load(response).get('verified')
 
-def cs_reputation_exchange(own_new_bc_address, partner_new_bc_address):
+def cs_reputation_exchange(partner_new_bc_address, outside_bc_address):
     # ToDo: A proper way to find the pair for the exchange in a anonymous way should be found or developed
-    unspent_bitcoins = blockr_unspent(bitcoin_address, 'testnet')
+    unspent_transactions = blockr_unspent(bitcoin_address, 'testnet')
+    unspent_bitcoins = 0
+    for transaction in unspent_transactions:
+        unspent_bitcoins += transaction.get('value')
 
-    print unspent_bitcoins
-    #single_payment(CHOSEN_CS + P_KEY, CHOSEN_CS + S_KEY, partner_new_bc_address, )
+    # ToDo: Perform a proper way to withdraw reputation
+    reputation_withdraw = (float(randint(2, 5)) / 100) * unspent_bitcoins
+
+    single_payment(CHOSEN_CS + S_KEY, bitcoin_address, partner_new_bc_address, unspent_bitcoins,
+                   outside_bc_address, int(reputation_withdraw))
 def main():
     #test1()
     #test2()
@@ -150,7 +157,8 @@ def main():
     #test5()
     #test6()
     #self_reputation_exchange(bc_address_from_cert(REPUTATION_CS + CS2_PATH + CERT))
-    cs_reputation_exchange(bc_address_from_cert(REPUTATION_CS + CS2_PATH + CERT), bc_address_from_cert(REPUTATION_CS + CS2_PATH + CERT))
+    cs_reputation_exchange(bc_address_from_cert(REPUTATION_CS + CS2_PATH + CERT), bc_address_from_cert(TRANSACTION_CS +
+                                                                                                       CS2_PATH + CERT))
 
 if __name__ == '__main__':
     main()
