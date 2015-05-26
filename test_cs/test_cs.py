@@ -5,8 +5,10 @@ import urllib2
 
 import requests
 from bitcointools import private_key_to_wif, get_priv_key_hex, public_key_to_bc_address, get_pub_key_hex, bc_address_from_cert
+from bitcointransactions import single_payment
 from flask import json
 from M2Crypto import EC
+from bitcoin import blockr_unspent
 
 P_KEY = 'paysense_public.key'
 S_KEY = 'paysense.key'
@@ -18,11 +20,11 @@ REPUTATION_CS = 'crowdSensors/reputationTest/'
 CS1_PATH = 'cs1/'
 CS2_PATH = 'cs2/'
 
-CHOSEN_CS = REPUTATION_CS + CS1_PATH
+CHOSEN_CS = TRANSACTION_CS + CS1_PATH
+bitcoin_address = bc_address_from_cert(CHOSEN_CS + CERT)
 
 
 def init_parameters():
-    bitcoin_address = bc_address_from_cert(CHOSEN_CS + CERT)
     ec = EC.load_key(CHOSEN_CS + S_KEY)
 
     message = '34512343291048'
@@ -60,7 +62,6 @@ def test2():
 
 # Request with wrong signature (without certificate)
 def test3():
-
     headers, data = init_parameters()
 
     ec = EC.load_key(CHOSEN_CS + S_KEY)
@@ -76,7 +77,6 @@ def test3():
 
 # Request with wrong signature (with certificate)
 def test4():
-
     headers, data = init_parameters()
 
     f = open(CHOSEN_CS + CERT, 'r')
@@ -97,7 +97,6 @@ def test4():
 
 # Register test
 def test5():
-
     response = urllib2.urlopen('http://127.0.0.1:5001/sign_in?bitcoin_address=')
     data = json.load(response)
     public_key = data["public_key"]
@@ -137,6 +136,12 @@ def self_reputation_exchange(new_bc_address):
 
     assert json.load(response).get('verified')
 
+def cs_reputation_exchange(own_new_bc_address, partner_new_bc_address):
+    # ToDo: A proper way to find the pair for the exchange in a anonymous way should be found or developed
+    unspent_bitcoins = blockr_unspent(bitcoin_address, 'testnet')
+
+    print unspent_bitcoins
+    #single_payment(CHOSEN_CS + P_KEY, CHOSEN_CS + S_KEY, partner_new_bc_address, )
 def main():
     #test1()
     #test2()
@@ -144,7 +149,8 @@ def main():
     #test4()
     #test5()
     #test6()
-    self_reputation_exchange(bc_address_from_cert(REPUTATION_CS + CS2_PATH + CERT))
+    #self_reputation_exchange(bc_address_from_cert(REPUTATION_CS + CS2_PATH + CERT))
+    cs_reputation_exchange(bc_address_from_cert(REPUTATION_CS + CS2_PATH + CERT), bc_address_from_cert(REPUTATION_CS + CS2_PATH + CERT))
 
 if __name__ == '__main__':
     main()

@@ -3,34 +3,16 @@ from M2Crypto import EC
 from bitcointools import *
 from bitcoin import *
 
-CS1_PATH = '../test_cs/crowdSensors/transactionTest/cs1/'
-CS2_PATH = '../test_cs/crowdSensors/transactionTest/cs2/'
-
-S_KEY = 'paysense.key'
-P_KEY = 'paysense_public.key'
-
-CS_BC_ADDRESS = 'mpFECAZYV4dXnK2waQC36AoZsAftv5RAkM'
-CS2_BC_ADDRESS = 'mkhrXULTeuwdNGSKVKhR1tjCFMktT6pXFX'
-
-
-def histories():
-    history_cs = history_testnet(CS_BC_ADDRESS)
-    print 'History CS ' + str(history_cs)
-    history_cs2 = history_testnet(CS2_BC_ADDRESS)
-    print 'History CS2 ' + str(history_cs2)
-    history_dcs = history_testnet('mqcKJjxaaUcG37MFA3jvyDkaznWs4kyLyg')
-    print 'History DCS ' + str(history_dcs)
-
-def single_payment(cs_bitcoin_address, amount, fee=None):
+def single_payment(p_key, s_key, cs_bitcoin_address, amount, fee=None):
     # Set the default fee
     if fee is None:
         fee = 1000
 
     # Load the public key from the key file
-    public_key = EC.load_pub_key(P_KEY)
+    public_key = EC.load_pub_key(p_key)
 
     # Get both public and private key in their hex representation
-    private_key_hex = get_priv_key_hex(S_KEY)
+    private_key_hex = get_priv_key_hex(s_key)
     public_key_hex = get_pub_key_hex(public_key)
 
     # Get the bitcoin address from the public key
@@ -58,19 +40,19 @@ def single_payment(cs_bitcoin_address, amount, fee=None):
     print result
 
 
-def multi_payment(cs_bitcoin_address, amount, fee=None):
+def multi_payment(cs1_p_key, cs1_s_key, cs2_p_key, cs2_s_key, cs_bitcoin_address, amount, fee=None):
     if fee is None:
         fee = 1000
 
     # Load both public keys
-    public_key = EC.load_pub_key(P_KEY)
-    public_key_2 = EC.load_pub_key(CS2_PATH + P_KEY)
+    public_key = EC.load_pub_key(cs1_p_key)
+    public_key_2 = EC.load_pub_key(cs2_p_key)
 
     # Get the hex representation of the keys from both the DCS and the CS2
-    private_key_hex = get_priv_key_hex(S_KEY)
+    private_key_hex = get_priv_key_hex(cs1_s_key)
     public_key_hex = get_pub_key_hex(public_key)
 
-    private_key_2_hex = get_priv_key_hex(CS2_PATH + S_KEY)
+    private_key_2_hex = get_priv_key_hex(cs2_s_key)
     public_key_2_hex = get_pub_key_hex(public_key_2)
 
     # Get their bitcoin addresses and their unspent bitcoins
@@ -101,10 +83,3 @@ def multi_payment(cs_bitcoin_address, amount, fee=None):
     result = blockr_pushtx(signed_tx, 'testnet')
 
     print result
-
-def main():
-    single_payment(CS2_BC_ADDRESS, 10000)
-    #multi_payment(CS_BC_ADDRESS, 2000)
-
-if __name__ == '__main__':
-    main()

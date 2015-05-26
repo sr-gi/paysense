@@ -229,7 +229,7 @@ def api_verify_reputation_exchange():
         # If it's verified that there's only one from address in the history transaction of the new address, the correctness
         # of the transactions from the old_address is checked.
         if verified == True:
-            old_history = history = history_testnet(old_bc_address)
+            old_history = history_testnet(old_bc_address)
             # ToDo: Think how to verify he correctness of the transactions from the old bitcoin address. We could calculate the amount of bitcoins
             # ToDo: that came from the DCS, and check if it is lower than the reputation transferred, or directly check the reputation value stored in the DCS
             # ToDo: DB (actually not implemented) and check that the amount transferred is lower than that one.
