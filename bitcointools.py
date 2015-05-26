@@ -7,6 +7,7 @@ from asn1tinydecoder import *
 from subprocess import check_output, STDOUT
 from bitcoin import make_request
 from flask import json
+from M2Crypto import X509
 
 
 PUBKEY_HASH = 0
@@ -44,8 +45,12 @@ def get_priv_key_hex(pk_file_path):
     raw_key = raw_key.replace(":", "")
     raw_key = raw_key.replace(" ", "")
     raw_key = raw_key.replace("\n", "")
-    # ToDO: Ensure that the first two values of the SK are always 00
-    private_key_hex = raw_key[2:]
+
+    # If the key starts with 00, the two first characters are removed
+    if raw_key[:2] == '00':
+        private_key_hex = raw_key[2:]
+    else:
+        private_key_hex = raw_key
 
     return private_key_hex
 
@@ -70,6 +75,13 @@ def private_key_to_wif(private_key, v=None):
     wif = e_pkey + checksum
     wif = b58encode(wif)
     return wif
+
+def bc_address_from_cert(certificate):
+    certificate = X509.load_cert(certificate)
+    details = certificate.get_subject().as_text()
+    bc_address = details[details.find('CN') + 3:]
+
+    return bc_address
 
 def tx_info(tx):
     input_addresses = []

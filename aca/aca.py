@@ -197,6 +197,46 @@ def api_sign_in():
 
     return jsonify(response)
 
+@app.route('/reputation_exchange', methods=['GET'])
+def api_verify_reputation_exchange():
+    # Verifies the reputation exchange between a certified bitcoin address, and a new one.
+    # Because of in the first version of the PaySense the ACA generate the keys and the certificates, the verification
+    # can't be done exactly how it's supposed to be. According to the paper, the requester CS should perform a reputation
+    # transaction to a new bitcoin address and send that address to the ACA to be verified and certified. In this version
+    # both addresses are already certified, but the ACA checks that the reputation of the new address comes only from the
+    # first one, and also that the reputation of the previous address is also correct.
+
+    verified = True
+
+    new_bc_addr = request.args.get('new_bc_address')
+    history = history_testnet(new_bc_addr)
+
+    # The new address can only have a single transaction, corresponding to the reputation transaction from the old address
+    if len(history) != 1:
+        verified = False
+    else:
+        # If there's only one transaction, the list of from addresses is extracted from the history and it's verified that
+        # all the addresses in the list are the same one, that will match with the old_bc_address
+        from_list = history[0].get('from')
+        old_bc_address = ''
+        for address in from_list:
+            if old_bc_address == '':
+                old_bc_address = address
+            else:
+                if old_bc_address != address:
+                    verified = False
+
+        # If it's verified that there's only one from address in the history transaction of the new address, the correctness
+        # of the transactions from the old_address is checked.
+        if verified == True:
+            old_history = history = history_testnet(old_bc_address)
+            # ToDo: Think how to verify he correctness of the transactions from the old bitcoin address. We could calculate the amount of bitcoins
+            # ToDo: that came from the DCS, and check if it is lower than the reputation transferred, or directly check the reputation value stored in the DCS
+            # ToDo: DB (actually not implemented) and check that the amount transferred is lower than that one.
+
+    response = {'verified': verified}
+    return jsonify(response)
+
 if __name__ == '__main__':
     app.run(port=5001)
     #pk, bitcoin_address = generate_keys()
