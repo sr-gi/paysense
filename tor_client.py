@@ -8,7 +8,7 @@ from stem.util import term
 
 SOCKS_PORT = 7000
 
-tor_server = "fa3m5wf3zgbbatss.onion"
+tor_server = "3ub4j7fpoytcp4zv.onion"
 
 def query(url, method='GET', data=None, headers=None):
 

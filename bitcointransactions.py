@@ -3,6 +3,20 @@ from M2Crypto import EC
 from bitcointools import *
 from bitcoin import *
 
+def insert_signature(tx, index, signature, public_key_hex):
+
+    tx_obj = deserialize(tx)
+    tx_obj["ins"][index]["script"] = serialize_script([signature, public_key_hex])
+
+    return serialize(tx_obj)
+
+def get_tx_signature(tx, private_key_hex, address,hashcode=SIGHASH_ALL):
+
+    signing_tx = signature_form(tx, 0, mk_pubkey_script(address), hashcode)
+    signature = ecdsa_tx_sign(signing_tx, private_key_hex, hashcode)
+
+    return signature
+
 def single_payment(s_key, own_bc_address, cs_bc_address, amount, outside_bc_address, outside_amount, fee=None):
     # Set the default fee
     if fee is None:
