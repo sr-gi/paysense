@@ -22,7 +22,7 @@ REPUTATION_CS = 'crowdSensors/reputationTest/'
 CS1_PATH = 'cs1/'
 CS2_PATH = 'cs2/'
 
-CHOSEN_CS = TRANSACTION_CS + CS1_PATH
+CHOSEN_CS = REPUTATION_CS + CS2_PATH
 bitcoin_address = bc_address_from_cert(CHOSEN_CS + CERT)
 
 
@@ -148,7 +148,7 @@ def self_reputation_exchange(new_bc_address):
 
     print unspent_bitcoins, reputation_withdraw
 
-    outside_address = bc_address_from_cert(TRANSACTION_CS + CS2_PATH + CERT)
+    outside_address = bc_address_from_cert(TRANSACTION_CS + CS1_PATH + CERT)
 
     single_payment(CHOSEN_CS + S_KEY, bitcoin_address, new_bc_address, unspent_bitcoins,
                    outside_address, int(reputation_withdraw))
@@ -179,7 +179,9 @@ def main():
     # test4()
     # test5()
     # test6()
-    self_reputation_exchange(bc_address_from_cert(REPUTATION_CS + CS2_PATH + CERT))
+    #self_reputation_exchange(bc_address_from_cert(TRANSACTION_CS + CS2_PATH + CERT))
+    print get_priv_key_hex(TRANSACTION_CS + CS2_PATH + S_KEY)
+    print bitcoin_address
     # cs_reputation_exchange(bc_address_from_cert(REPUTATION_CS + CS2_PATH + CERT), bc_address_from_cert(TRANSACTION_CS + CS2_PATH + CERT))
 
 

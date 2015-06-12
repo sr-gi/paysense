@@ -10,8 +10,10 @@ def insert_signature(tx, index, signature, public_key_hex):
 
     return serialize(tx_obj)
 
-def get_tx_signature(tx, private_key_hex, address,hashcode=SIGHASH_ALL):
+def get_tx_signature(tx, private_key_hex, address, hashcode=SIGHASH_ALL):
 
+    # ToDO: This should be change to look into the deserialized tx, identifying the input that march with your bc_address
+    # ToDO: and signing this input. Then, both the signature ant the index should be returned
     signing_tx = signature_form(tx, 0, mk_pubkey_script(address), hashcode)
     signature = ecdsa_tx_sign(signing_tx, private_key_hex, hashcode)
 
@@ -28,8 +30,15 @@ def single_payment(s_key, own_bc_address, cs_bc_address, amount, outside_bc_addr
     # Check the unspent bitcoins from that address
     unspent_bitcoins = blockr_unspent(own_bc_address, 'testnet')
 
+    print unspent_bitcoins
+
+
     # Build the output of the payment
     outs = [{'value': amount - outside_amount - fee, 'address': cs_bc_address}, {'value': outside_amount, 'address': outside_bc_address}]
+
+    print outs
+
+    exit(0)
 
     # Build the transaction
     tx = mktx(unspent_bitcoins, outs)
