@@ -65,16 +65,16 @@ tor_process = stem.process.launch_tor_with_config(
 
 # SEND OUTPUTS
 
-#data = [{'value': 120743010, 'address': 'mkhrXULTeuwdNGSKVKhR1tjCFMktT6pXFX'}, {'value': 3734350, 'address': 'mpFECAZYV4dXnK2waQC36AoZsAftv5RAkM'}]
-#data = json.dumps({'outputs': data})
-#headers = ['Content-type: application/json', 'Accept: text/plain']
+data = [{'value': 120743010, 'address': 'mkhrXULTeuwdNGSKVKhR1tjCFMktT6pXFX'}, {'value': 3734350, 'address': 'mpFECAZYV4dXnK2waQC36AoZsAftv5RAkM'}]
+data = json.dumps({'outputs': data})
+headers = ['Content-type: application/json', 'Accept: text/plain']
 #print(term.format(query(tor_server + "/outputs", 'POST', data, headers), term.Color.BLUE))
 
 # SEND INPUTS
 
-#data = [{'output': u'4d65acc9ea8c6dcd41aba7d04d70aae03d2ab40abe7425c8c94cefc766aa5fa0:0', 'value': 124478360}]
-#data = json.dumps({'inputs': data})
-#headers = ['Content-type: application/json', 'Accept: text/plain']
+data = [{'output': u'4d65acc9ea8c6dcd41aba7d04d70aae03d2ab40abe7425c8c94cefc766aa5fa0:0', 'value': 124478360}]
+data = json.dumps({'inputs': data})
+headers = ['Content-type: application/json', 'Accept: text/plain']
 #print(term.format(query(tor_server + "/inputs", 'POST', data, headers), term.Color.BLUE))
 
 # GET TX FOR SIGNING
@@ -85,14 +85,13 @@ tor_process = stem.process.launch_tor_with_config(
 tx = "0100000001a05faa66c7ef4cc9c82574be0ab42a3de0aa704dd0a7ab41cd6d8ceac9ac654d0000000000ffffffff0262643207000000001976a91438e8639a08fc099fcff648dca27f01c2d32dcac788ac4efb3800000000001976a9145fbfbf7fe54155a94c457f627507ee186c1e053c88ac00000000"
 private_key_hex = "e7ab51292a1c77630d7b016e59dc1b80e2f58a7ee480e8820520aeca1cd31d25"
 bitcoin_address = "n4KA9X2S35n3EDLoGmqbzrEgYZTNf3y1Eb"
-#signature = get_tx_signature(tx, private_key_hex, bitcoin_address)
-#print signature
-signature = "304502204e885e74e2c17f4c38a05991f6a093cfb1490ff2349b14407c53706e0a6746f9022100f82dc2285a359dbb9324744c40282568453762437e291c468635b6eb78d57cb801"
+signature, index = get_tx_signature(tx, private_key_hex, bitcoin_address)
 
-data = [{'output': u'4d65acc9ea8c6dcd41aba7d04d70aae03d2ab40abe7425c8c94cefc766aa5fa0:0', 'value': 124478360}]
-data = json.dumps({'inputs': data})
+#ToDo: The PK musst be sent with the signature and the index
+data = {'signature': signature, 'index': index}
+data = json.dumps({'data': data})
 headers = ['Content-type: application/json', 'Accept: text/plain']
-print(term.format(query(tor_server + "/inputs", 'POST', data, headers), term.Color.BLUE))
+print(term.format(query(tor_server + "/signatures", 'POST', data, headers), term.Color.BLUE))
 
 #print(term.format(query(tor_server), term.Color.BLUE))
 

@@ -3,7 +3,7 @@ __author__ = "sdelgado"
 import threading
 
 from stem.control import Controller
-from flask import Flask, request
+from flask import Flask, request, json
 from bitcoin import mktx
 from bitcointransactions import insert_signature
 
@@ -48,8 +48,8 @@ def post_outputs():
             tx_outputs = request.json.get("outputs")
             for tx_output in tx_outputs:
                 outputs.append(tx_output)
-                message = "OK"
 
+            message = "OK"
             n_outputs += 1
             print outputs
         else:
@@ -88,10 +88,12 @@ def get_signatures():
         if request.method == "GET" and tx is not None:
             return tx
         elif request.method == "POST" and request.headers["Content-Type"] == "application/json":
-            tx_signature = request.json.get("signature")
-            input_index = request.json.get("index")
+            data = request.json.get("data")
+            tx_signature = data["signature"]
+            input_index = data["index"]
             signatures.append([tx_signature, input_index])
             print signatures
+
             return "OK"
         else:
             return "Wrong request"
@@ -100,9 +102,16 @@ def get_signatures():
 
 
 def reset_arrays():
-    global outputs, inputs, signatures
+    global outputs, inputs, signatures, n_outputs
+
+    print "Reseting arrays. Current stage :" + stage
+    print "Arrays status: "
+    print "outputs :" + str(outputs) + "with len (n_outputs) :" +str(n_outputs)
+    print "inputs :" + str(inputs) + "with len :" +str(len(inputs))
+    print "outputs :" + str(signatures) + "with len :" +str(len(signatures))
 
     outputs = inputs = signatures = []
+    n_outputs = 0
 
 def insert_signatures(tx):
     for data in signatures:
@@ -117,7 +126,7 @@ def insert_signatures(tx):
 def change_stage():
     global stage, tx, n_outputs, inputs, outputs
 
-    if stage == "outputs":
+    if stage == "outputs" and n_outputs > 0:
         stage = "inputs"
     elif stage == "inputs":
         if n_outputs == len(inputs) and n_outputs != 0:
@@ -131,7 +140,7 @@ def change_stage():
     elif stage == "signatures":
         if n_outputs == len(inputs) == len(signatures) and n_outputs != 0:
             insert_signatures(tx)
-            print tx
+            print "Final tx: " + tx
         # End of the mixing, starting the process again
         reset_arrays()
         stage = "outputs"
