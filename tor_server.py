@@ -3,8 +3,8 @@ __author__ = "sdelgado"
 import threading
 
 from stem.control import Controller
-from flask import Flask, request, json
-from bitcoin import mktx
+from flask import Flask, request
+from bitcoin import mktx, blockr_pushtx
 from bitcointransactions import insert_signature
 
 app = Flask(__name__)
@@ -89,9 +89,11 @@ def get_signatures():
             return tx
         elif request.method == "POST" and request.headers["Content-Type"] == "application/json":
             data = request.json.get("data")
+            print data
             tx_signature = data["signature"]
             input_index = data["index"]
-            signatures.append([tx_signature, input_index])
+            public_key_hex = data["public_key"]
+            signatures.append([tx_signature, input_index, public_key_hex])
             print signatures
 
             return "OK"
@@ -106,11 +108,13 @@ def reset_arrays():
 
     print "Reseting arrays. Current stage :" + stage
     print "Arrays status: "
-    print "outputs :" + str(outputs) + "with len (n_outputs) :" +str(n_outputs)
-    print "inputs :" + str(inputs) + "with len :" +str(len(inputs))
-    print "outputs :" + str(signatures) + "with len :" +str(len(signatures))
+    print "outputs : " + str(outputs) + " with len (n_outputs) : " + str(n_outputs)
+    print "inputs : " + str(inputs) + " with len : " + str(len(inputs))
+    print "signatures : " + str(signatures) + " with len : " + str(len(signatures))
 
-    outputs = inputs = signatures = []
+    outputs = []
+    inputs = []
+    signatures = []
     n_outputs = 0
 
 def insert_signatures(tx):
@@ -139,8 +143,10 @@ def change_stage():
             stage = "outputs"
     elif stage == "signatures":
         if n_outputs == len(inputs) == len(signatures) and n_outputs != 0:
-            insert_signatures(tx)
+            tx = insert_signatures(tx)
             print "Final tx: " + tx
+            result = blockr_pushtx(tx, 'testnet')
+            print result
         # End of the mixing, starting the process again
         reset_arrays()
         stage = "outputs"

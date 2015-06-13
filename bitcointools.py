@@ -5,7 +5,7 @@ from base58 import b58encode
 from binascii import a2b_hex, b2a_hex
 from asn1tinydecoder import *
 from subprocess import check_output, STDOUT
-from bitcoin import make_request
+from bitcoin import *
 from flask import json
 from M2Crypto import X509
 
@@ -111,4 +111,31 @@ def history_testnet(bitcoin_address):
             history.append(tx_info(txs[i].get('tx')))
 
     return history
+
+def insert_signature(tx, index, signature, public_key_hex):
+
+    tx_obj = deserialize(tx)
+    tx_obj["ins"][index]["script"] = serialize_script([signature, public_key_hex])
+
+    return serialize(tx_obj)
+
+def get_tx_signature(tx, private_key_hex, bc_address, hashcode=SIGHASH_ALL):
+
+    tx_obj = deserialize(tx)
+    index = None
+
+    for tx_in in tx_obj['ins']:
+        prev_tx_hash = tx_in['outpoint']['hash']
+        prev_tx_info = tx_info(prev_tx_hash)
+        if bc_address in prev_tx_info['to']:
+            index = tx_obj['ins'].index(tx_in)
+
+    if index is not None:
+        signing_tx = signature_form(tx, index, mk_pubkey_script(bc_address), hashcode)
+        signature = ecdsa_tx_sign(signing_tx, private_key_hex, hashcode)
+        response = signature, index
+    else:
+        response = "Error, no input tx to sign"
+
+    return response
 

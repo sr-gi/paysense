@@ -4,8 +4,7 @@ from base64 import b64encode
 import urllib2
 
 import requests
-from bitcointools import private_key_to_wif, get_priv_key_hex, public_key_to_bc_address, get_pub_key_hex, \
-    bc_address_from_cert
+from bitcointools import *
 from bitcointransactions import single_payment
 from flask import json
 from M2Crypto import EC
@@ -179,9 +178,8 @@ def main():
     # test4()
     # test5()
     # test6()
-    #self_reputation_exchange(bc_address_from_cert(TRANSACTION_CS + CS2_PATH + CERT))
-    print get_priv_key_hex(TRANSACTION_CS + CS2_PATH + S_KEY)
-    print bitcoin_address
+    self_reputation_exchange(bc_address_from_cert(TRANSACTION_CS + CS2_PATH + CERT))
+
     # cs_reputation_exchange(bc_address_from_cert(REPUTATION_CS + CS2_PATH + CERT), bc_address_from_cert(TRANSACTION_CS + CS2_PATH + CERT))
 
 

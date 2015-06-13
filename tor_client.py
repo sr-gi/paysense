@@ -87,8 +87,10 @@ private_key_hex = "e7ab51292a1c77630d7b016e59dc1b80e2f58a7ee480e8820520aeca1cd31
 bitcoin_address = "n4KA9X2S35n3EDLoGmqbzrEgYZTNf3y1Eb"
 signature, index = get_tx_signature(tx, private_key_hex, bitcoin_address)
 
+public_key_hex = "041032bfff6c3157eb49d8ea498bbe774170c1969326046e7afa57351513a631559dcb2b6b2e94180554d76de074a5a039172b17d34899523962d1d3bd6f36be7c"
+
 #ToDo: The PK musst be sent with the signature and the index
-data = {'signature': signature, 'index': index}
+data = {'signature': signature, 'index': index, 'public_key': public_key_hex}
 data = json.dumps({'data': data})
 headers = ['Content-type: application/json', 'Accept: text/plain']
 print(term.format(query(tor_server + "/signatures", 'POST', data, headers), term.Color.BLUE))
