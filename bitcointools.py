@@ -1,6 +1,5 @@
 __author__ = 'sdelgado'
 
-import hashlib
 from base58 import b58encode
 from binascii import a2b_hex, b2a_hex
 from asn1tinydecoder import *

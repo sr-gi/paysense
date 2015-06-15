@@ -14,14 +14,8 @@ def single_payment(s_key, own_bc_address, cs_bc_address, amount, outside_bc_addr
     # Check the unspent bitcoins from that address
     unspent_bitcoins = blockr_unspent(own_bc_address, 'testnet')
 
-    print unspent_bitcoins
-
     # Build the output of the payment
     outs = [{'value': amount - outside_amount - fee, 'address': cs_bc_address}, {'value': outside_amount, 'address': outside_bc_address}]
-
-    print outs
-
-    exit(0)
 
     # Build the transaction
     tx = mktx(unspent_bitcoins, outs)

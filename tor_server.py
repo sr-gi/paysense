@@ -10,7 +10,7 @@ from bitcointransactions import insert_signature
 app = Flask(__name__)
 
 stage = "outputs"
-stage_time = 30.0
+stage_time = 45.0
 
 outputs = []
 inputs = []

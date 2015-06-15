@@ -172,17 +172,15 @@ def cs_reputation_exchange(partner_new_bc_address, outside_bc_address):
 
 
 def main():
-    # test1()
+    test1()
     # test2()
     # test3()
     # test4()
     # test5()
     # test6()
-    self_reputation_exchange(bc_address_from_cert(REPUTATION_CS + CS1_PATH + CERT))
+    #self_reputation_exchange(bc_address_from_cert(TRANSACTION_CS + CS2_PATH + CERT))
 
     # cs_reputation_exchange(bc_address_from_cert(REPUTATION_CS + CS2_PATH + CERT), bc_address_from_cert(TRANSACTION_CS + CS2_PATH + CERT))
-
-
 
 if __name__ == '__main__':
     main()

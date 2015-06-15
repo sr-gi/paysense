@@ -65,14 +65,16 @@ tor_process = stem.process.launch_tor_with_config(
 
 # SEND OUTPUTS
 
-data = [{'value': 120743010, 'address': 'mkhrXULTeuwdNGSKVKhR1tjCFMktT6pXFX'}, {'value': 3734350, 'address': 'mpFECAZYV4dXnK2waQC36AoZsAftv5RAkM'}]
+#data = [{'value': 47999000, 'address': 'n21HQXRWgbW3XTFTQ44vYDsxi62ve9VXwK'}, {'value': 2000000, 'address': 'mqcKJjxaaUcG37MFA3jvyDkaznWs4kyLyg'}]
+data = [{'value': 47999000, 'address': 'n4KA9X2S35n3EDLoGmqbzrEgYZTNf3y1Eb'}, {'value': 2000000, 'address': 'mqcKJjxaaUcG37MFA3jvyDkaznWs4kyLyg'}]
 data = json.dumps({'outputs': data})
 headers = ['Content-type: application/json', 'Accept: text/plain']
 #print(term.format(query(tor_server + "/outputs", 'POST', data, headers), term.Color.BLUE))
 
 # SEND INPUTS
 
-data = [{'output': u'4d65acc9ea8c6dcd41aba7d04d70aae03d2ab40abe7425c8c94cefc766aa5fa0:0', 'value': 124478360}]
+#data = [{'output': u'cd1eec897705dc3f6df2c9221b55f8bba175b325ced022c201eb5dec71e1c1e1:0', 'value': 50000000}]
+data = [{'output': u'd803b1e18e21ed6d1da82043565e17613070b53a80259b27db139291b4b83092:0', 'value': 50000000}]
 data = json.dumps({'inputs': data})
 headers = ['Content-type: application/json', 'Accept: text/plain']
 #print(term.format(query(tor_server + "/inputs", 'POST', data, headers), term.Color.BLUE))
@@ -82,13 +84,18 @@ headers = ['Content-type: application/json', 'Accept: text/plain']
 
 # SEND SIGNATURE
 
-tx = "0100000001a05faa66c7ef4cc9c82574be0ab42a3de0aa704dd0a7ab41cd6d8ceac9ac654d0000000000ffffffff0262643207000000001976a91438e8639a08fc099fcff648dca27f01c2d32dcac788ac4efb3800000000001976a9145fbfbf7fe54155a94c457f627507ee186c1e053c88ac00000000"
-private_key_hex = "e55c1e65a7b5e143e3625639f4329bdd0e1008fe7220bfc76162a9e1cf995352"
-bitcoin_address = "n4KA9X2S35n3EDLoGmqbzrEgYZTNf3y1Eb"
+tx = "0100000002e1c1e171ec5deb01c222d0ce25b375a1bbf8551b22c9f26d3fdc057789ec1ecd0000000000ffffffff9230b8b4919213db279b25803ab5703061175e564320a81d6ded218ee1b103d80000000000ffffffff041868dc02000000001976a914e0be1dbba826125347223d35881031e6a3e2bc5788ac80841e00000000001976a9146eb4e0a11709a52726058e230dfd54899ce7fc0c88ac1868dc02000000001976a914fa0fcbb53dbae5102b5c16760ea46ef9e9276abc88ac80841e00000000001976a9146eb4e0a11709a52726058e230dfd54899ce7fc0c88ac00000000"
+
+#private_key_hex = "a132c58610842880c13958ad7f24dbaecdd555e9c577abd8b7e758c4d972b32b"
+#bitcoin_address = "mpFECAZYV4dXnK2waQC36AoZsAftv5RAkM"
+#public_key_hex = "04334adfad67535594003cd851062de94a90f06f0782b15fa1812796aaae1bfdcdf00820b04e5955a968b0ae46445eff8dc1a3d1e4f864fbd3bce00c31580c7c85"
+
+private_key_hex = "e7ab51292a1c77630d7b016e59dc1b80e2f58a7ee480e8820520aeca1cd31d25"
+bitcoin_address = "mkhrXULTeuwdNGSKVKhR1tjCFMktT6pXFX"
+public_key_hex = "04565226d1ee700878825e3b2ecdd86d1b6980126b463bf2fc541d10289f9c74d4c8e9551859b247deb7ff3c144894b6e9af60f46094c4c86372103f3ad01fb043"
+
 signature, index = get_tx_signature(tx, private_key_hex, bitcoin_address)
-
-
-public_key_hex = "041032bfff6c3157eb49d8ea498bbe774170c1969326046e7afa57351513a631559dcb2b6b2e94180554d76de074a5a039172b17d34899523962d1d3bd6f36be7c"
+print signature, index
 
 data = {'signature': signature, 'index': index, 'public_key': public_key_hex}
 data = json.dumps({'data': data})
