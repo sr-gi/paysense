@@ -21,7 +21,7 @@ REPUTATION_CS = 'crowdSensors/reputationTest/'
 CS1_PATH = 'cs1/'
 CS2_PATH = 'cs2/'
 
-CHOSEN_CS = REPUTATION_CS + CS2_PATH
+CHOSEN_CS = TRANSACTION_CS + CS1_PATH
 bitcoin_address = bc_address_from_cert(CHOSEN_CS + CERT)
 
 
@@ -178,9 +178,10 @@ def main():
     # test4()
     # test5()
     # test6()
-    self_reputation_exchange(bc_address_from_cert(TRANSACTION_CS + CS2_PATH + CERT))
+    self_reputation_exchange(bc_address_from_cert(REPUTATION_CS + CS1_PATH + CERT))
 
     # cs_reputation_exchange(bc_address_from_cert(REPUTATION_CS + CS2_PATH + CERT), bc_address_from_cert(TRANSACTION_CS + CS2_PATH + CERT))
+
 
 
 if __name__ == '__main__':

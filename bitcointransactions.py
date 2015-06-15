@@ -16,7 +16,6 @@ def single_payment(s_key, own_bc_address, cs_bc_address, amount, outside_bc_addr
 
     print unspent_bitcoins
 
-
     # Build the output of the payment
     outs = [{'value': amount - outside_amount - fee, 'address': cs_bc_address}, {'value': outside_amount, 'address': outside_bc_address}]
 
