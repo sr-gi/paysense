@@ -5,16 +5,18 @@ from flask import Flask, request
 import urllib2
 from base64 import b64decode
 
-app = Flask(__name__)
 
-
+# Gets the CS certificate from the ACA in pem format
+# @bitcoin_address is the bitcoin address that identifies the CS
+# @return CS certificate in pem format
 def get_cs_pem_data(bitcoin_address):
     response = urllib2.urlopen('http://127.0.0.1:5001/get_cs_cert?bitcoin_address=' + bitcoin_address)
     pem_data = b64decode(response.read())
 
     return pem_data
 
-
+# Gets the ACA certificate in pem format
+# @return ACA certificate in pem format
 def get_ca_pem_data():
     response = urllib2.urlopen('http://127.0.0.1:5001/get_ca_cert')
     pem_data = b64decode(response.read())
@@ -22,6 +24,12 @@ def get_ca_pem_data():
     return pem_data
 
 
+# Verifies the CS and the ACA signatures from a received sensing data
+# @message is the sensed data itself
+# @signature is the signature of the data, performed by the CS
+# @bitcoin_address is the bitcoin address that identifies the CS
+# @cs_pem_data is an optional parameter that represents the certificate of the CS. If no certificate is provided,
+# the function will request one to the ACA using the @bitcoin_address as a parameter
 def verify_data(message, signature, bitcoin_address, cs_pem_data=None):
     if cs_pem_data is None:
         # Get CS from the ACA (pem data base64 encoded)
@@ -44,6 +52,13 @@ def verify_data(message, signature, bitcoin_address, cs_pem_data=None):
     return {'ca': ca_verify, 'cs': cs_verify}
 
 
+############################
+#       WEB INTERFACE      #
+############################
+
+app = Flask(__name__)
+
+# Serves the sensed data recollection from the CSs
 @app.route('/', methods=['POST'])
 def api_receive_data():
     if request.headers['Content-Type'] == 'application/json':

@@ -100,8 +100,24 @@ def test4():
     assert r.content == "Sensing data can't be verified"
 
 
-# Register test
+# Import formats test
 def test5():
+    ec = EC.load_key(CHOSEN_CS + S_KEY)
+    # Generate the bitcoin address from the public key
+    public_key_hex = get_pub_key_hex(ec.pub())
+    bitcoin_address = public_key_to_bc_address(public_key_hex, 'test')
+    print bitcoin_address
+
+    # Generate WIF from private key
+    private_key_hex = get_priv_key_hex(CHOSEN_CS + S_KEY)
+    print private_key_hex
+    private_key_wif = private_key_to_wif(private_key_hex, 'test')
+    print private_key_wif
+
+
+# CS registration
+# ToDo: Change this function to use blind signatures
+def registration():
     response = urllib2.urlopen('http://127.0.0.1:5001/sign_in?bitcoin_address=')
     data = json.load(response)
     public_key = data["public_key"]
@@ -117,22 +133,6 @@ def test5():
     f = open(CERT, 'w')
     f.write(certificate)
     f.close()
-
-
-# Import formats test
-def test6():
-    ec = EC.load_key(CHOSEN_CS + S_KEY)
-    # Generate the bitcoin address from the public key
-    public_key_hex = get_pub_key_hex(ec.pub())
-    bitcoin_address = public_key_to_bc_address(public_key_hex, 'test')
-    print bitcoin_address
-
-    # Generate WIF from private key
-    private_key_hex = get_priv_key_hex(CHOSEN_CS + S_KEY)
-    print private_key_hex
-    private_key_wif = private_key_to_wif(private_key_hex, 'test')
-    print private_key_wif
-
 
 # This test emulates the CS reputation exchange when he doesn't trust any other CS nor the ACA
 def self_reputation_exchange(new_bc_address):
@@ -177,10 +177,6 @@ def main():
     # test3()
     # test4()
     # test5()
-    # test6()
-    #self_reputation_exchange(bc_address_from_cert(TRANSACTION_CS + CS2_PATH + CERT))
-
-    # cs_reputation_exchange(bc_address_from_cert(REPUTATION_CS + CS2_PATH + CERT), bc_address_from_cert(TRANSACTION_CS + CS2_PATH + CERT))
 
 if __name__ == '__main__':
     main()

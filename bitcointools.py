@@ -8,7 +8,6 @@ from bitcoin import *
 from flask import json
 from M2Crypto import X509
 
-
 PUBKEY_HASH = 0
 TESTNET_PUBKEY_HASH = 111
 WIF = 128

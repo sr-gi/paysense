@@ -10,23 +10,41 @@ from M2Crypto import X509, EC, EVP, BIO, ASN1
 
 from bitcointools import public_key_to_bc_address, get_pub_key_hex, history_testnet
 
-app = Flask(__name__)
+############################
+#     GLOBAL VARIABLES     #
+############################
 
+# Locals paths to the ACA files
 ACA_CERT = 'ACA/cacert.pem'
 ACA_KEY = 'ACA/private/cakey.pem'
 CS_CERTS_PATH = 'ACA/newcerts/'
 
+# Bitcoin address of the DCS (globally known)
 DCS_BC_ADDRESS = 'mqcKJjxaaUcG37MFA3jvyDkaznWs4kyLyg'
 
+
+############################
+#        FUNCTIONS         #
+############################
+
+# Checks if a certificate exists in the certificate directory
+# @bitcoin_address is the name of the certificate to look for
+# @return true/false depending on if the file exists or not
 def check_certificate(bitcoin_address):
     return path.exists(CS_CERTS_PATH + bitcoin_address + '.pem')
 
+
+# Checks the payers in the transaction history of a bitcoin address
+# ToDo: FIX THIS FUNCTION
+# This function should be changed, makes no sense how it's done now.
+# It should validate that the payments come from the DCS or from a previously certified CS (just the first payment).
+# To be efficient the blockchain should be analyzed only after the certification date of the CS.
 def check_payers(history, expected_payer=None):
     validation = True
     if expected_payer is None:
         expected_payer = DCS_BC_ADDRESS
     if len(history) == 0:
-        validation= False
+        validation = False
     for i in range(len(history)):
         payer = history[i].get('from')
         if payer is not expected_payer:
@@ -34,7 +52,10 @@ def check_payers(history, expected_payer=None):
 
     return validation
 
-
+# Generates a JSon-like response with the public and private key, and the certificate of the requester CS.
+# ToDO: CHANGE THIS FUNCTION
+# Once the CS registration is done using blind signatures, the CS should send a CSR to the ACA. The ACA will response
+# only with the generated certificate, both keys will be in possession of the CS instead of the ACA.
 def generate_response(bitcoin_address):
     # Get data from the pem file, and generate a response
     f = open(bitcoin_address + '_key.pem')
@@ -54,7 +75,10 @@ def generate_response(bitcoin_address):
 
     return data
 
-
+# Stores a certificate in the certificates path
+# @certificate is the certificate object with all the necessary information
+# @bitcoin_address is the name that will be used to store this certificate. This name matches with the bitcoin address
+# of the CS.
 def store_certificate(certificate, bitcoin_address):
     # Save the pem data into the pem file
     certificate.save_pem(CS_CERTS_PATH + bitcoin_address + '.pem')
@@ -70,6 +94,9 @@ def store_certificate(certificate, bitcoin_address):
     f.close()
 
 
+# Generates a certificate for a requester CS
+# @pkey is an object that represents the CS public key (elliptic curve key).
+# @bitcoin_address is the identifier of the CS, that will be placed in the CN of the certificate
 def generate_certificate(pkey, bitcoin_address):
 
     # Load ACA certificate
@@ -114,8 +141,10 @@ def generate_certificate(pkey, bitcoin_address):
     # Store certificate
     store_certificate(cert, bitcoin_address)
 
-
-#def generate_keys(bitcoin_address):
+# Generates a elliptic curve key pair that will be sent lately to the CS.
+# ToDO: DELETE THIS FUNCTION
+# This function should be deleted once the registration is done using blind signatures, the key pair will be already
+# in possession of the CS.
 def generate_keys():
 
     # Generate the elliptic curve and the keys
@@ -136,10 +165,12 @@ def generate_keys():
     ec.save_key(bitcoin_address + '_key.pem', None)
     ec.save_pub_key(bitcoin_address + '_public_key.pem')
 
-    #return pk
     return pk, bitcoin_address
 
 
+# Returns a CS certificate
+# @bitcoin_address is the CS pseudonym. It is used to look for the specific file name in the certificates directory.
+# @return the requested certificate
 def get_cs_certificate(bitcoin_address):
     if check_certificate(bitcoin_address):
         f = open(CS_CERTS_PATH + bitcoin_address + '.pem')
@@ -150,7 +181,8 @@ def get_cs_certificate(bitcoin_address):
 
     return certificate
 
-
+# Returns the ACA certificate
+# @return the ACA certificate
 def get_ca_certificate():
     f = open(ACA_CERT)
     certificate = f.read()
@@ -158,7 +190,14 @@ def get_ca_certificate():
 
     return certificate
 
+############################
+#       WEB INTERFACE      #
+############################
 
+app = Flask(__name__)
+
+# Serves the CS certificate requests
+# ToDo: Check if the requests should be restricted
 @app.route('/get_cs_cert', methods=['GET'])
 def api_get_cs_pem():
     # Get the bitcoin_address from the url
@@ -175,16 +214,22 @@ def api_get_cs_pem():
 
     return response
 
+
+# Serves the ACA certificate requests
 @app.route('/get_ca_cert', methods=['GET'])
 def api_get_ca_pem():
     certificate = get_ca_certificate()
     return b64encode(certificate)
 
 
+# Serves the registration requests from the CS
+# ToDO: CHANGE THIS FUNCTION
+# This is a workaround, in this first version the ACA generates either the keys and the certificate.
+# Once the registration is done using blind signatures, the bitcoin address and the public key should be
+# obtained with the request
 @app.route('/sign_in', methods=['GET'])
 def api_sign_in():
     # Get the bitcoin_address from the url
-    # Todo: This is a workaround, in this first version the ACA generates either the keys and the certificate
     #bitcoin_address = request.args.get('bitcoin_address')
     #pk = generate_keys(bitcoin_address)
     pk, bitcoin_address = generate_keys()
@@ -197,6 +242,8 @@ def api_sign_in():
 
     return jsonify(response)
 
+# Serves the reputation exchange requests from the CSs
+# ToDo: CHANGE THIS FUNCTION
 @app.route('/reputation_exchange', methods=['GET'])
 def api_verify_reputation_exchange():
     # Verifies the reputation exchange between a certified bitcoin address, and a new one.
@@ -216,7 +263,7 @@ def api_verify_reputation_exchange():
         # ToDo: CHANGE TO FALSE (Is set to true just for testing)
         verified = True
     else:
-        # If there's only one transaction, the list of from addresses is extracted from the history and it's verified that
+        # If there's only one transaction, the list of 'from addresses' is extracted from the history and is verified that
         # all the addresses in the list are the same one, that will match with the old_bc_address
         from_list = history[0].get('from')
         old_bc_address = ''
@@ -231,7 +278,7 @@ def api_verify_reputation_exchange():
         # of the transactions from the old_address is checked.
         if verified == True:
             old_history = history_testnet(old_bc_address)
-            # ToDo: Think how to verify he correctness of the transactions from the old bitcoin address. We could calculate the amount of bitcoins
+            # ToDo: Think how to verify the correctness of the transactions from the old bitcoin address. We could calculate the amount of bitcoins
             # ToDo: that came from the DCS, and check if it is lower than the reputation transferred, or directly check the reputation value stored in the DCS
             # ToDo: DB (actually not implemented) and check that the amount transferred is lower than that one.
 
