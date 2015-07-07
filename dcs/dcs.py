@@ -4,6 +4,12 @@ from M2Crypto import X509, EC
 from flask import Flask, request
 import urllib2
 from base64 import b64decode
+from bitcointransactions import single_payment
+from bitcointools import bc_address_from_cert
+
+S_KEY = 'private/paysense.key'
+CERT = 'paysense.crt'
+DEFAULT_AMOUNT = 1000
 
 
 # Gets the CS certificate from the ACA in pem format
@@ -51,6 +57,13 @@ def verify_data(message, signature, bitcoin_address, cs_pem_data=None):
 
     return {'ca': ca_verify, 'cs': cs_verify}
 
+def pay_to_cs(bitcoin_address, amount=None):
+    if amount is None:
+        amount = DEFAULT_AMOUNT
+    dcs_address = bc_address_from_cert(CERT)
+    single_payment(S_KEY, dcs_address, bitcoin_address, amount)
+
+
 
 ############################
 #       WEB INTERFACE      #
@@ -75,6 +88,9 @@ def api_receive_data():
 
             if verify['ca'] & verify['cs']:
                 response = "Sensing data correctly verified"
+                # ToDO: Data should be validated before performing the payment for the sensing.
+                pay_to_cs(bitcoin_address)
+
             else:
                 response = "Sensing data can't be verified"
         else:

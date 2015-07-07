@@ -3,7 +3,7 @@ __author__ = 'sdelgado'
 from base64 import b64encode
 import urllib2
 
-import requests
+import requests, qrcode, PIL
 from bitcointools import *
 from bitcointransactions import single_payment
 from flask import json
@@ -15,13 +15,13 @@ P_KEY = 'paysense_public.key'
 S_KEY = 'paysense.key'
 CERT = 'paysense.crt'
 
-TRANSACTION_CS = 'crowdSensors/transactionTest/'
-REPUTATION_CS = 'crowdSensors/reputationTest/'
+TRANSACTION_CS = 'old_crowdSensors/transactionTest/'
+REPUTATION_CS = 'old_crowdSensors/reputationTest/'
 
 CS1_PATH = 'cs1/'
 CS2_PATH = 'cs2/'
 
-CHOSEN_CS = TRANSACTION_CS + CS1_PATH
+CHOSEN_CS = REPUTATION_CS + CS2_PATH
 bitcoin_address = bc_address_from_cert(CHOSEN_CS + CERT)
 
 
@@ -134,49 +134,53 @@ def registration():
     f.write(certificate)
     f.close()
 
+    s_key = get_priv_key_hex(S_KEY)
+    wif_qr = private_key_to_wif(s_key, 'test', 'image')
+
+    wif_qr.save("wif_qr.png", "PNG")
+
 # This test emulates the CS reputation exchange when he doesn't trust any other CS nor the ACA
-def self_reputation_exchange(new_bc_address):
+def self_reputation_exchange(new_bc_address, outside_bc_address=None):
 
-    unspent_transactions = blockr_unspent(bitcoin_address, 'testnet')
-    unspent_bitcoins = 0
-    for transaction in unspent_transactions:
-        unspent_bitcoins += transaction.get('value')
+    address_balance = get_balance(bitcoin_address)
 
-    # ToDo: Perform a proper way to withdraw reputation
-    reputation_withdraw = (float(randint(2, 5)) / 100) * unspent_bitcoins
+    if outside_bc_address is not None:
+        # ToDo: Perform a proper way to withdraw reputation
+        reputation_withdraw = (float(randint(2, 5)) / 100) * address_balance
+        single_payment(CHOSEN_CS + S_KEY, bitcoin_address, new_bc_address, address_balance, outside_bc_address, int(reputation_withdraw))
+    else:
+        single_payment(CHOSEN_CS + S_KEY, bitcoin_address, new_bc_address, address_balance)
 
-    print unspent_bitcoins, reputation_withdraw
+    #response = urllib2.urlopen('http://127.0.0.1:5001/reputation_exchange?new_bc_address=' + new_bc_address)
 
-    outside_address = bc_address_from_cert(TRANSACTION_CS + CS1_PATH + CERT)
-
-    single_payment(CHOSEN_CS + S_KEY, bitcoin_address, new_bc_address, unspent_bitcoins,
-                   outside_address, int(reputation_withdraw))
-
-    response = urllib2.urlopen('http://127.0.0.1:5001/reputation_exchange?new_bc_address=' + new_bc_address)
-
-    assert json.load(response).get('verified')
+    #assert json.load(response).get('verified')
 
 
 def cs_reputation_exchange(partner_new_bc_address, outside_bc_address):
     # ToDo: A proper way to find the pair for the exchange in a anonymous way should be found or developed
-    unspent_transactions = blockr_unspent(bitcoin_address, 'testnet')
-    unspent_bitcoins = 0
-    for transaction in unspent_transactions:
-        unspent_bitcoins += transaction.get('value')
+    address_balance = get_balance(bitcoin_address)
 
     # ToDo: Perform a proper way to withdraw reputation
-    reputation_withdraw = (float(randint(2, 5)) / 100) * unspent_bitcoins
+    reputation_withdraw = (float(randint(2, 5)) / 100) * address_balance
 
-    single_payment(CHOSEN_CS + S_KEY, bitcoin_address, partner_new_bc_address, unspent_bitcoins,
+    single_payment(CHOSEN_CS + S_KEY, bitcoin_address, partner_new_bc_address, address_balance,
                    outside_bc_address, int(reputation_withdraw))
 
 
 def main():
-    test1()
-    # test2()
-    # test3()
-    # test4()
-    # test5()
+    #test1()
+    #test2()
+    #test3()
+    #test4()
+    #test5()
+    #registration()
+    #new_bitcoin_address = bc_address_from_cert(REPUTATION_CS + CS2_PATH + CERT)
+    #self_reputation_exchange("mqcKJjxaaUcG37MFA3jvyDkaznWs4kyLyg")
+
+    registration()
+
+
+
 
 if __name__ == '__main__':
     main()

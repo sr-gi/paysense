@@ -1,5 +1,8 @@
+import requests
+
 __author__ = 'sdelgado'
 
+import qrcode
 from base58 import b58encode
 from binascii import a2b_hex, b2a_hex
 from asn1tinydecoder import *
@@ -82,7 +85,7 @@ def get_priv_key_hex(pk_file_path):
 # # @v is the version (prefix) used to calculate the WIF, it depends on the type of network (128 for normal network
 # and 239 for testnet)
 # @return the WIF representation of the given private key
-def private_key_to_wif(private_key, v=None):
+def private_key_to_wif(private_key, v=None, mode='text'):
     if v is 'test':
         v = TESTNET_WIF
     else:
@@ -94,7 +97,13 @@ def private_key_to_wif(private_key, v=None):
     checksum = sha256_2[0:4]
     wif = e_pkey + checksum
     wif = b58encode(wif)
-    return wif
+
+    if mode is 'text':
+        response = wif
+    else:
+        response = qrcode.make(wif)
+
+    return response
 
 # Gets the bitcoin address form a PaySense x.509 certificate (stored in the CN field)
 # @certificate is the X.509 object containing the certificate information
@@ -143,8 +152,45 @@ def history_testnet(bitcoin_address):
 
     return history
 
+# Pushes a tx to the bitcoin network (to the testnet by default) with 0 fees
+# @tx is the transaction to be pushed
+# @network is the network where the transaction will be pushed
+# @return a result consisting on a code (201 if success) and the hash of the transaction
+def push_tx(tx, network='testnet'):
+    if network in ['testnet', 'main']:
+        if network is 'testnet':
+            url = 'https://api.blockcypher.com/v1/btc/test3/txs/push'
+        elif network is 'main':
+            url = 'https://api.blockcypher.com/v1/btc/main/txs/push'
+
+        data = {'tx': tx}
+        response = requests.post(url, data=json.dumps(data))
+    else:
+        response = 'Bad network'
+
+    r_code = response.status_code
+    pushed_tx = json.loads(response._content)
+    tx_hash = str(pushed_tx['tx']['hash'])
+
+    return r_code, tx_hash
+
+# Gets the balance of a given bitcoin address from a given network
+# @bitcoin_address is the bitcoin address from which the balance will be calculated
+# @network is the bitcoin network where the address comes from (testnet by default)
+# @return the bitcoin address balance (in Satoshi)
+def get_balance(bitcoin_address, network='testnet'):
+    if network in ['testnet', 'main']:
+        if network is 'testnet':
+            url = 'http://tbtc.blockr.io/api/v1/address/balance/'
+        elif network is 'main':
+            url = 'http://btc.blockr.io/api/v1/address/balance/'
+
+    response = json.loads(make_request(url + bitcoin_address))
+
+    return int(100000000 * response['data']['balance'])
+
 # Computes the signature from a given transaction
-# @tx is the input trnasaction
+# @tx is the input transaction
 # @private_key is the elliptic curve private key (in hex format) used to sign
 # @hashcode indicates which parts of the transaction will be signed. It is set to all by default
 # @return the signature of the transaction, or an error if there's no transaction to sign

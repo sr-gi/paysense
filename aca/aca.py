@@ -15,13 +15,12 @@ from bitcointools import public_key_to_bc_address, get_pub_key_hex, history_test
 ############################
 
 # Locals paths to the ACA files
-ACA_CERT = 'ACA/cacert.pem'
-ACA_KEY = 'ACA/private/cakey.pem'
-CS_CERTS_PATH = 'ACA/newcerts/'
+ACA_CERT = 'paysense.crt'
+ACA_KEY = 'private/paysense.key'
+CS_CERTS_PATH = 'certs/'
 
 # Bitcoin address of the DCS (globally known)
 DCS_BC_ADDRESS = 'mqcKJjxaaUcG37MFA3jvyDkaznWs4kyLyg'
-
 
 ############################
 #        FUNCTIONS         #
@@ -260,8 +259,7 @@ def api_verify_reputation_exchange():
 
     # The new address can only have a single transaction, corresponding to the reputation transaction from the old address
     if len(history) != 1:
-        # ToDo: CHANGE TO FALSE (Is set to true just for testing)
-        verified = True
+        verified = False
     else:
         # If there's only one transaction, the list of 'from addresses' is extracted from the history and is verified that
         # all the addresses in the list are the same one, that will match with the old_bc_address
