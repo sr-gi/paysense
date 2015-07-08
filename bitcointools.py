@@ -85,7 +85,7 @@ def get_priv_key_hex(pk_file_path):
 # # @v is the version (prefix) used to calculate the WIF, it depends on the type of network (128 for normal network
 # and 239 for testnet)
 # @return the WIF representation of the given private key
-def private_key_to_wif(private_key, v=None, mode='text'):
+def private_key_to_wif(private_key, mode='text', v=None):
     if v is 'test':
         v = TESTNET_WIF
     else:

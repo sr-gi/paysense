@@ -11,7 +11,6 @@ S_KEY = 'private/paysense.key'
 CERT = 'paysense.crt'
 DEFAULT_AMOUNT = 1000
 
-
 # Gets the CS certificate from the ACA in pem format
 # @bitcoin_address is the bitcoin address that identifies the CS
 # @return CS certificate in pem format
@@ -60,9 +59,8 @@ def verify_data(message, signature, bitcoin_address, cs_pem_data=None):
 def pay_to_cs(bitcoin_address, amount=None):
     if amount is None:
         amount = DEFAULT_AMOUNT
-    dcs_address = bc_address_from_cert(CERT)
-    single_payment(S_KEY, dcs_address, bitcoin_address, amount)
 
+    single_payment(S_KEY, BC_ADDRESS, bitcoin_address, amount)
 
 
 ############################
@@ -103,4 +101,11 @@ def api_receive_data():
 
 
 if __name__ == '__main__':
+    global BC_ADDRESS
+
+    # Get the current bitcoin address of the DCS
+    f = open('bitcoin_address.txt', 'r')
+    BC_ADDRESS = f.read()
+    f.close()
+
     app.run()

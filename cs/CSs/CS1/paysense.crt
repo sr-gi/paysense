@@ -1,0 +1,72 @@
+Certificate:
+    Data:
+        Version: 1 (0x0)
+        Serial Number: 0 (0x0)
+    Signature Algorithm: sha256WithRSAEncryption
+        Issuer: C=CT, ST=Barcelona, L=Bellaterra, O=PaySense, OU=ACA, CN=ACA/emailAddress=aca@deic.uab.cat
+        Validity
+            Not Before: Jul  8 08:52:09 2015 GMT
+            Not After : Jul  7 08:52:09 2016 GMT
+        Subject: C=CA, ST=Barcelona, L=Bellaterra, O=UAB, OU=DEIC, CN=mmWQUBYYWToZZMpw4paVNs2MnoJSaEWQzy
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: (256 bit)
+                pub: 
+                    04:79:20:c7:ba:87:6a:51:66:9d:e6:e6:89:d4:aa:
+                    28:71:97:6e:80:1c:1f:0b:18:c5:5d:f8:b6:02:10:
+                    c2:31:59:ee:5e:ac:84:5f:a7:4f:65:b0:e4:74:c3:
+                    f3:f0:3a:cb:68:e1:62:1a:5f:da:8e:26:94:a8:6e:
+                    97:58:5c:5a:d9
+                ASN1 OID: secp256k1
+    Signature Algorithm: sha256WithRSAEncryption
+         0f:ca:90:a8:0c:13:30:43:e2:b6:f2:fd:d5:6c:dc:4a:5e:6d:
+         2b:4d:00:34:c7:05:f3:56:38:8a:fc:b4:61:cd:01:0a:af:99:
+         f8:fe:d6:6c:5d:14:24:ae:db:99:20:d1:2d:f1:7c:cb:ab:81:
+         99:8f:7f:e3:86:22:e8:23:61:c5:a6:d5:f2:35:5b:05:74:1c:
+         b7:ab:30:ec:b1:ab:25:3e:29:c3:6c:49:26:2a:13:62:f0:ce:
+         23:98:d4:2c:77:00:95:5f:c4:26:bf:ce:fe:a5:45:6c:23:34:
+         45:1c:a6:fb:3f:a8:d9:4a:14:db:ec:06:80:88:32:8f:04:da:
+         31:2a:88:fb:0b:c1:13:6d:68:82:6f:66:46:2d:58:dc:98:5b:
+         a1:8e:16:08:68:a6:8d:99:13:00:cc:ca:2f:a8:73:3b:dc:26:
+         9b:c0:0e:9b:1e:5f:8e:31:82:37:1a:e8:2a:6a:66:79:c5:de:
+         91:fa:c1:c7:6b:13:1d:97:9a:86:ae:d0:87:85:b9:65:86:8c:
+         95:08:79:f9:09:96:98:64:87:ff:8d:26:74:72:04:bd:ae:b3:
+         c7:64:67:6d:92:68:bd:e5:3f:13:7c:28:51:44:83:a1:c3:10:
+         0e:35:81:47:13:5b:1a:ff:84:13:84:6a:7d:1e:bb:ea:71:5c:
+         68:84:56:79:5b:c3:1d:96:1c:b4:77:df:c7:f1:ca:f9:70:2e:
+         30:bf:a3:49:18:9c:1e:f9:1b:fb:8f:b1:9a:43:d5:90:58:15:
+         11:21:61:99:07:0d:5c:93:24:be:f7:63:19:fa:94:54:60:30:
+         80:89:ba:57:6d:2a:6e:3b:0a:ce:d2:7b:2c:9a:93:76:46:bb:
+         05:d5:5f:09:39:84:60:f5:4d:f8:ba:de:83:26:73:ce:08:18:
+         e6:5d:fc:15:1a:ed:cc:cb:e3:35:b4:35:51:4e:ac:1f:41:89:
+         aa:b9:39:ce:23:d7:5a:4b:53:6d:f0:97:69:00:ef:03:22:79:
+         ce:75:2c:14:17:df:9d:cd:d8:13:02:49:70:e6:1f:ea:82:7b:
+         62:9e:89:f8:05:06:10:2d:16:0a:d0:79:3a:84:8f:25:09:c2:
+         21:56:58:33:03:eb:44:d0:62:7b:4f:df:21:29:1a:21:3c:bc:
+         4d:72:86:3d:69:6e:d4:71:2d:fa:7c:c9:13:28:68:80:36:a3:
+         14:7d:32:9a:29:e0:ef:a4:b0:36:77:04:0d:ec:f6:38:52:b6:
+         87:33:61:72:ce:6a:2a:8b:57:ab:84:37:34:09:5b:bd:44:b1:
+         e2:2a:de:5c:f6:82:62:a6:99:80:a3:8b:21:d2:a1:7f:d3:40:
+         78:9a:e7:7d:0b:40:b4:3c
+-----BEGIN CERTIFICATE-----
+MIIDrjCCAZYCAQAwDQYJKoZIhvcNAQELBQAwgYYxCzAJBgNVBAYTAkNUMRIwEAYD
+VQQIDAlCYXJjZWxvbmExEzARBgNVBAcMCkJlbGxhdGVycmExETAPBgNVBAoMCFBh
+eVNlbnNlMQwwCgYDVQQLDANBQ0ExDDAKBgNVBAMMA0FDQTEfMB0GCSqGSIb3DQEJ
+ARYQYWNhQGRlaWMudWFiLmNhdDAeFw0xNTA3MDgwODUyMDlaFw0xNjA3MDcwODUy
+MDlaMIGAMQswCQYDVQQGEwJDQTESMBAGA1UECAwJQmFyY2Vsb25hMRMwEQYDVQQH
+DApCZWxsYXRlcnJhMQwwCgYDVQQKDANVQUIxDTALBgNVBAsMBERFSUMxKzApBgNV
+BAMMIm1tV1FVQllZV1RvWlpNcHc0cGFWTnMyTW5vSlNhRVdRenkwVjAQBgcqhkjO
+PQIBBgUrgQQACgNCAAR5IMe6h2pRZp3m5onUqihxl26AHB8LGMVd+LYCEMIxWe5e
+rIRfp09lsOR0w/PwOsto4WIaX9qOJpSobpdYXFrZMA0GCSqGSIb3DQEBCwUAA4IC
+AQAPypCoDBMwQ+K28v3VbNxKXm0rTQA0xwXzVjiK/LRhzQEKr5n4/tZsXRQkrtuZ
+INEt8XzLq4GZj3/jhiLoI2HFptXyNVsFdBy3qzDssaslPinDbEkmKhNi8M4jmNQs
+dwCVX8Qmv87+pUVsIzRFHKb7P6jZShTb7AaAiDKPBNoxKoj7C8ETbWiCb2ZGLVjc
+mFuhjhYIaKaNmRMAzMovqHM73CabwA6bHl+OMYI3GugqamZ5xd6R+sHHaxMdl5qG
+rtCHhbllhoyVCHn5CZaYZIf/jSZ0cgS9rrPHZGdtkmi95T8TfChRRIOhwxAONYFH
+E1sa/4QThGp9HrvqcVxohFZ5W8Mdlhy0d9/H8cr5cC4wv6NJGJwe+Rv7j7GaQ9WQ
+WBURIWGZBw1ckyS+92MZ+pRUYDCAibpXbSpuOwrO0nssmpN2RrsF1V8JOYRg9U34
+ut6DJnPOCBjmXfwVGu3My+M1tDVRTqwfQYmquTnOI9daS1Nt8JdpAO8DInnOdSwU
+F9+dzdgTAklw5h/qgntinon4BQYQLRYK0Hk6hI8lCcIhVlgzA+tE0GJ7T98hKRoh
+PLxNcoY9aW7UcS36fMkTKGiANqMUfTKaKeDvpLA2dwQN7PY4UraHM2Fyzmoqi1er
+hDc0CVu9RLHiKt5c9oJippmAo4sh0qF/00B4mud9C0C0PA==
+-----END CERTIFICATE-----
