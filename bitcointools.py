@@ -117,7 +117,7 @@ def bc_address_from_cert(certificate):
 
 # Gets the basic information from a given bitcoin transaction of the testnet (input address, output address, and bitcoin amount)
 # @tx is the transaction
-# @return a JSon object containing the input address, the output address and the bitcoin amount transferred in the transaction
+# @return a JSon object containing the input address, the output address, the bitcoin amount transferred in the transaction and the number of confirmations
 def tx_info(tx):
     input_addresses = []
     output_addresses = []
@@ -126,14 +126,16 @@ def tx_info(tx):
     response = json.loads(make_request('http://tbtc.blockr.io/api/v1/tx/info/' + tx))
     vins = response.get('data').get('trade').get('vins')
     vouts = response.get('data').get('trade').get('vouts')
+    confirmations = response.get('data').get('confirmations')
 
     for i in range(len(vins)):
-        input_addresses.append(vins[i].get('address'))
+        if vins[i].get('address') not in input_addresses:
+            input_addresses.append(vins[i].get('address'))
     for i in range(len(vouts)):
         output_addresses.append(vouts[i].get('address'))
         payments.append(vouts[i].get('amount'))
 
-    return {'from': input_addresses, 'to': output_addresses, 'amount': payments}
+    return {'from': input_addresses, 'to': output_addresses, 'amount': payments, 'confirmations': confirmations}
 
 # Gets the history of transaction from a given bitcoin address from the testnet. This function is analogous to the
 # vbuterin's history function from the bitcointools library (used all over the code) but using testnet instead of normal
@@ -155,7 +157,7 @@ def history_testnet(bitcoin_address):
 # Pushes a tx to the bitcoin network (to the testnet by default) with 0 fees
 # @tx is the transaction to be pushed
 # @network is the network where the transaction will be pushed
-# @return a result consisting on a code (201 if success) and the hash of the transaction
+# @return a result consisting on a code (201 if success), a response reason, and the hash of the transaction
 def push_tx(tx, network='testnet'):
     if network in ['testnet', 'main']:
         if network is 'testnet':
@@ -169,10 +171,11 @@ def push_tx(tx, network='testnet'):
         response = 'Bad network'
 
     r_code = response.status_code
-    pushed_tx = json.loads(response._content)
+    r_reason = response.reason
+    pushed_tx = json.loads(response.content)
     tx_hash = str(pushed_tx['tx']['hash'])
 
-    return r_code, tx_hash
+    return r_code, r_reason, tx_hash
 
 # Gets the balance of a given bitcoin address from a given network
 # @bitcoin_address is the bitcoin address from which the balance will be calculated
@@ -188,6 +191,20 @@ def get_balance(bitcoin_address, network='testnet'):
     response = json.loads(make_request(url + bitcoin_address))
 
     return int(100000000 * response['data']['balance'])
+
+
+def get_necessary_amount(unspent_bitcoins, amount):
+
+    values = []
+    # Get all the values from the unspent transactions
+    for transaction in unspent_bitcoins:
+        values.append(transaction.get("value"))
+
+    values = sorted(values)
+
+    necessary_amount = []
+
+    return necessary_amount
 
 # Computes the signature from a given transaction
 # @tx is the input transaction

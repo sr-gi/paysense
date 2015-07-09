@@ -6,7 +6,7 @@ from cs import CS
 
 ROOT_DIRECTORY = 'CSs/CS'
 CS_COUNT = 10
-INTERVAL = 10
+INTERVAL = 3600
 
 def get_data_directory(index):
         return ROOT_DIRECTORY + str(index) + '/'

@@ -1,5 +1,4 @@
 __author__ = 'sdelgado'
-from M2Crypto import EC
 from bitcointools import *
 from bitcoin import *
 
@@ -17,10 +16,13 @@ def single_payment(s_key, source_bc_address, destination_bc_address, amount, out
     private_key_hex = get_priv_key_hex(s_key)
 
     # Check the unspent bitcoins from that address
-    unspent_bitcoins = blockr_unspent(source_bc_address, 'testnet')
+    unspent_transactions = blockr_unspent(source_bc_address, 'testnet')
 
-    # Get the bitcoin address balance
-    total_bitcoins = get_balance(source_bc_address)
+    necessary_amount = get_necessary_amount(unspent_transactions, amount)
+
+    exit(0)
+
+    total_bitcoins = 0
 
     # Build the output of the payment
 
@@ -35,10 +37,11 @@ def single_payment(s_key, source_bc_address, destination_bc_address, amount, out
         outs = [{'value': total_bitcoins - outside_amount, 'address': destination_bc_address}, {'value': outside_amount - fee, 'address': outside_bc_address}]
 
     # Build the transaction
-    tx = mktx(unspent_bitcoins, outs)
+    tx = mktx(necessary_amount, outs)
+    print tx
 
     # Sign it
-    for i in range(len(unspent_bitcoins)):
+    for i in range(len(necessary_amount)):
         tx = sign(tx, i, private_key_hex)
 
     result = push_tx(tx)

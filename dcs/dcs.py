@@ -5,7 +5,6 @@ from flask import Flask, request
 import urllib2
 from base64 import b64decode
 from bitcointransactions import single_payment
-from bitcointools import bc_address_from_cert
 
 S_KEY = 'private/paysense.key'
 CERT = 'paysense.crt'
