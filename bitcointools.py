@@ -195,16 +195,42 @@ def get_balance(bitcoin_address, network='testnet'):
 
 def get_necessary_amount(unspent_bitcoins, amount):
 
-    values = []
+    # Sort the transactions from less to more amount
+    unspent_bitcoins = sorted(unspent_bitcoins, key=lambda item:item['value'])
+
     # Get all the values from the unspent transactions
+    values = []
     for transaction in unspent_bitcoins:
         values.append(transaction.get("value"))
 
-    values = sorted(values)
-
     necessary_amount = []
+    amount = 15000
 
-    return necessary_amount
+    # Get the minimum amount necessary to perform the tx.
+
+    # First of all, it is looked if there's any previous transaction with the same amount that we want to spent.
+    # If so, that transaction will be the chosen one.
+    if amount in values:
+        necessary_amount.append(unspent_bitcoins[values.index(amount)])
+        total_amount = values[values.index(amount)]
+
+    # Otherwise, the transactions with the lesser amount will be added until the necessary requested amount is reached.
+    else:
+        total_amount = 0
+        i = 0
+        while total_amount < amount:
+            necessary_amount.append(unspent_bitcoins[i])
+            total_amount += values[i]
+            i += 1
+
+        # Finally, if the amount of the last added transaction is greater than the amount we were looking for,
+        # that last transaction could be used alone.
+
+        if values[len(necessary_amount) - 1] > amount:
+            total_amount = values[len(necessary_amount) - 1]
+            necessary_amount = [unspent_bitcoins[len(necessary_amount) - 1]]
+
+    return necessary_amount, total_amount
 
 # Computes the signature from a given transaction
 # @tx is the input transaction

@@ -80,6 +80,7 @@ class CS(object):
         else:
             single_payment(self.data_path + S_KEY, bitcoin_address, new_bc_address, address_balance)
 
+
         response = urllib2.urlopen('http://127.0.0.1:5001/reputation_exchange?new_bc_address=' + new_bc_address)
 
         return response

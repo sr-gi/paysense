@@ -10,7 +10,8 @@ from bitcoin import *
 # @outside_bc_address is the bitcoin address where the withdrawal amount of bitcoin will go
 # @outside_amount is the amount of bitcoin that will be withdrawn
 # @fee represent the transaction fee, it is set to 0 Satoshi by default
-def single_payment(s_key, source_bc_address, destination_bc_address, amount, outside_bc_address=None, outside_amount=None, fee=0):
+# @return an updated list of the used transactions
+def single_payment(s_key, source_bc_address, destination_bc_address, amount, used_tx=None, outside_bc_address=None, outside_amount=None, fee=0):
 
     # Get both public and private key in their hex representation
     private_key_hex = get_priv_key_hex(s_key)
@@ -18,11 +19,12 @@ def single_payment(s_key, source_bc_address, destination_bc_address, amount, out
     # Check the unspent bitcoins from that address
     unspent_transactions = blockr_unspent(source_bc_address, 'testnet')
 
-    necessary_amount = get_necessary_amount(unspent_transactions, amount)
+    # update the used transactions (but still not verified)
+    if used_tx is not None:
+        # ToDo
+        used_tx = used_tx
 
-    exit(0)
-
-    total_bitcoins = 0
+    necessary_amount, total_bitcoins = get_necessary_amount(unspent_transactions, amount)
 
     # Build the output of the payment
 
@@ -47,4 +49,7 @@ def single_payment(s_key, source_bc_address, destination_bc_address, amount, out
     result = push_tx(tx)
 
     print result
+
+    return used_tx
+
 
