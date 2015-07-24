@@ -11,10 +11,12 @@ from bitcoin import *
 from flask import json
 from M2Crypto import X509
 
+
 PUBKEY_HASH = 0
 TESTNET_PUBKEY_HASH = 111
 WIF = 128
 TESTNET_WIF = 239
+
 
 # Calculates the RIPEMD-160 of a given elliptic curve public key
 # @public_key is an elliptic curve public key
@@ -24,6 +26,7 @@ def hash_160(public_key):
     sha256 = hashlib.sha256(a2b_hex(public_key)).digest()
     md.update(sha256)
     return md.digest()
+
 
 # Calculates the bitcoin address of a given RIPEMD-160 hash from a elliptic curve public key
 # @h160 is the RIPEMD-160 hash
@@ -35,6 +38,7 @@ def hash_160_to_bc_address(h160, v):
     h = hashlib.sha256(hashlib.sha256(vh160).digest()).digest()
     addr = vh160 + h[0:4]
     return b58encode(addr)
+
 
 # Calculates the bitcoin address of a given elliptic curve public key
 # @public_key is a elliptic curve public key in hexadecimal format
@@ -49,6 +53,7 @@ def public_key_to_bc_address(public_key, v=None):
     h160 = hash_160(public_key)
     return hash_160_to_bc_address(h160, v)
 
+
 # Gets a public key in hexadecimal format from a OpenSSL public key object
 # @public_key is an OpenSSL public key object
 # @return the hexadecimal representation of the public key
@@ -58,12 +63,12 @@ def get_pub_key_hex(public_key):
     key = b2a_hex(asn1_get_value(der, asn1_node_next(der, asn1_node_first_child(der, root))))
     return key[2:]
 
+
 # Gets a private key in hexadecimal format from a key file
 # @pk_file_path is the system path where the private key is found
 # @return the hexadecimal representation of the private key
 # ToDO: Find a way to get the SK without a system call
 def get_priv_key_hex(pk_file_path):
-
     cmd = ['openssl', 'ec', '-in', pk_file_path, '-text', '-noout']
     response = check_output(cmd, stderr=STDOUT)
 
@@ -79,6 +84,7 @@ def get_priv_key_hex(pk_file_path):
         private_key_hex = raw_key
 
     return private_key_hex
+
 
 # Calculates the wallet input format (WIF) of a given elliptic curve private key
 # @private_key is an elliptic curve private key in hex format
@@ -105,6 +111,7 @@ def private_key_to_wif(private_key, mode='text', v=None):
 
     return response
 
+
 # Gets the bitcoin address form a PaySense x.509 certificate (stored in the CN field)
 # @certificate is the X.509 object containing the certificate information
 # @return the corresponding bitcoin address
@@ -114,6 +121,7 @@ def bc_address_from_cert(certificate):
     bc_address = details[details.find('CN') + 3:]
 
     return bc_address
+
 
 # Gets the basic information from a given bitcoin transaction of the testnet (input address, output address, and bitcoin amount)
 # @tx is the transaction
@@ -137,6 +145,7 @@ def tx_info(tx):
 
     return {'from': input_addresses, 'to': output_addresses, 'amount': payments, 'confirmations': confirmations}
 
+
 # Gets the history of transaction from a given bitcoin address from the testnet. This function is analogous to the
 # vbuterin's history function from the bitcointools library (used all over the code) but using testnet instead of normal
 # bitcoin network
@@ -153,6 +162,7 @@ def history_testnet(bitcoin_address):
             history.append(tx_info(txs[i].get('tx')))
 
     return history
+
 
 # Pushes a tx to the bitcoin network (to the testnet by default) with 0 fees
 # @tx is the transaction to be pushed
@@ -177,6 +187,7 @@ def push_tx(tx, network='testnet'):
 
     return r_code, r_reason, tx_hash
 
+
 # Gets the balance of a given bitcoin address from a given network
 # @bitcoin_address is the bitcoin address from which the balance will be calculated
 # @network is the bitcoin network where the address comes from (testnet by default)
@@ -193,14 +204,16 @@ def get_balance(bitcoin_address, network='testnet'):
     return int(100000000 * response['data']['balance'])
 
 
-def get_necessary_amount(unspent_bitcoins, amount):
-
-    if len(unspent_bitcoins) is 0 or unspent_bitcoins is None:
+def get_necessary_amount(unspent_transactions, amount, priority='small'):
+    if len(unspent_transactions) is 0 or unspent_transactions is None:
         necessary_amount = []
         total_amount = 0
     else:
+        if priority == 'big':
+            unspent_bitcoins = sorted(unspent_transactions, key=lambda item: item['value'], reverse=True)
+        else:
         # Sort the transactions from less to more amount
-        unspent_bitcoins = sorted(unspent_bitcoins, key=lambda item: item['value'])
+            unspent_bitcoins = sorted(unspent_transactions, key=lambda item: item['value'])
 
         # Get all the values from the unspent transactions
         values = []
@@ -221,19 +234,24 @@ def get_necessary_amount(unspent_bitcoins, amount):
         else:
             total_amount = 0
             i = 0
-            while total_amount < amount:
+            while total_amount < amount and i < len(unspent_bitcoins):
                 necessary_amount.append(unspent_bitcoins[i])
                 total_amount += values[i]
                 i += 1
 
+            # If we doesn't reach an enough total amount, no transaction could be performed
+            if total_amount < amount:
+                total_amount = 0
+                necessary_amount = []
+
             # Finally, if the amount of the last added transaction is greater than the amount we were looking for,
             # that last transaction could be used alone.
-
-            if values[len(necessary_amount) - 1] > amount:
+            elif values[len(necessary_amount) - 1] > amount:
                 total_amount = values[len(necessary_amount) - 1]
                 necessary_amount = [unspent_bitcoins[len(necessary_amount) - 1]]
 
     return necessary_amount, total_amount
+
 
 # Computes the signature from a given transaction
 # @tx is the input transaction
@@ -242,7 +260,6 @@ def get_necessary_amount(unspent_bitcoins, amount):
 # @return the signature of the transaction, or an error if there's no transaction to sign
 # ToDO: Handle this error properly
 def get_tx_signature(tx, private_key, bc_address, hashcode=SIGHASH_ALL):
-
     tx_obj = deserialize(tx)
     index = None
 
@@ -261,14 +278,44 @@ def get_tx_signature(tx, private_key, bc_address, hashcode=SIGHASH_ALL):
 
     return response
 
+
 # Inserts a given transaction signature into a given transaction
 # @tx is the input transaction
 # @index is the input index of the transaction in which the signature must be placed
 # @public_key is the elliptic curve public key (in hex format) used to insert the signature in the corresponding input
 def insert_signature(tx, index, signature, public_key):
-
     tx_obj = deserialize(tx)
     tx_obj["ins"][index]["script"] = serialize_script([signature, public_key])
 
     return serialize(tx_obj)
 
+
+# Split a large amount of bitcoins in smaller parts.
+# @bc_address is the bitcoin address used as a source and destination of the transaction
+# @private_key is the private key used to sign the transaction (hex format)
+# @amount is the amount of each one of the parts
+# @parts is the number of parts of @amount generated
+# @return the bitcoin network response to the transaction pushing
+def split_bitcoins(bc_address, private_key, amount, parts, priority='small'):
+
+    unspent_transactions = blockr_unspent(bc_address, 'testnet')
+
+    necessary_amount, total_amount = get_necessary_amount(unspent_transactions, amount * parts, priority)
+
+    outs = []
+
+    for i in range(parts - 1):
+        outs.append({'value': amount, 'address': bc_address})
+        total_amount -= amount
+
+    outs.append({'value': total_amount, 'address': bc_address})
+
+    tx = mktx(necessary_amount, outs)
+
+    for i in range(len(necessary_amount)):
+        tx = sign(tx, i, private_key)
+
+    print tx
+    response = push_tx(tx)
+
+    return response

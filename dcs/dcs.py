@@ -76,7 +76,6 @@ def api_receive_data():
         signature = str(request.json.get("signature"))
         bitcoin_address = request.json.get("bitcoin_address")
         cs_pem_data = request.json.get("cs_pem_data")
-        print type(message), type(signature), type(bitcoin_address)
         if message is not None and signature is not None and bitcoin_address is not None:
             if cs_pem_data is None:
                 verify = verify_data(message, b64decode(signature), bitcoin_address)

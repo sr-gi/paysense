@@ -51,9 +51,10 @@ def single_payment(s_key, source_bc_address, destination_bc_address, amount, use
         for i in range(len(necessary_amount)):
             tx = sign(tx, i, private_key_hex)
 
-        code, reason, tx_hash = push_tx(tx)
+        print tx
+        exit(0)
 
-        code = '201'
+        code, reason, tx_hash = push_tx(tx)
 
         if code == '201':
             used_txs.extend(necessary_amount)

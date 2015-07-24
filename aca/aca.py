@@ -22,6 +22,7 @@ CS_CERTS_PATH = 'certs/'
 # Bitcoin address of the DCS (globally known)
 DCS_BC_ADDRESS = 'mqcKJjxaaUcG37MFA3jvyDkaznWs4kyLyg'
 
+
 ############################
 #        FUNCTIONS         #
 ############################
@@ -51,6 +52,7 @@ def check_payers(history, expected_payer=None):
 
     return validation
 
+
 # Generates a JSon-like response with the public and private key, and the certificate of the requester CS.
 # ToDO: CHANGE THIS FUNCTION
 # Once the CS registration is done using blind signatures, the CS should send a CSR to the ACA. The ACA will response
@@ -73,6 +75,7 @@ def generate_response(bitcoin_address):
     remove(bitcoin_address + '_key.pem')
 
     return data
+
 
 # Stores a certificate in the certificates path
 # @certificate is the certificate object with all the necessary information
@@ -97,7 +100,6 @@ def store_certificate(certificate, bitcoin_address):
 # @pkey is an object that represents the CS public key (elliptic curve key).
 # @bitcoin_address is the identifier of the CS, that will be placed in the CN of the certificate
 def generate_certificate(pkey, bitcoin_address):
-
     # Load ACA certificate
     ca_cert = X509.load_cert(ACA_CERT)
     # Load ACA private key
@@ -140,12 +142,12 @@ def generate_certificate(pkey, bitcoin_address):
     # Store certificate
     store_certificate(cert, bitcoin_address)
 
+
 # Generates a elliptic curve key pair that will be sent lately to the CS.
 # ToDO: DELETE THIS FUNCTION
 # This function should be deleted once the registration is done using blind signatures, the key pair will be already
 # in possession of the CS.
 def generate_keys():
-
     # Generate the elliptic curve and the keys
     ec = EC.gen_params(EC.NID_secp256k1)
     ec.gen_key()
@@ -180,6 +182,7 @@ def get_cs_certificate(bitcoin_address):
 
     return certificate
 
+
 # Returns the ACA certificate
 # @return the ACA certificate
 def get_ca_certificate():
@@ -189,11 +192,13 @@ def get_ca_certificate():
 
     return certificate
 
+
 ############################
 #       WEB INTERFACE      #
 ############################
 
 app = Flask(__name__)
+
 
 # Serves the CS certificate requests
 # ToDo: Check if the requests should be restricted
@@ -229,8 +234,8 @@ def api_get_ca_pem():
 @app.route('/sign_in', methods=['GET'])
 def api_sign_in():
     # Get the bitcoin_address from the url
-    #bitcoin_address = request.args.get('bitcoin_address')
-    #pk = generate_keys(bitcoin_address)
+    # bitcoin_address = request.args.get('bitcoin_address')
+    # pk = generate_keys(bitcoin_address)
     pk, bitcoin_address = generate_keys()
 
     # Generate the digital certificate
@@ -240,6 +245,7 @@ def api_sign_in():
     response = generate_response(bitcoin_address)
 
     return jsonify(response)
+
 
 # Serves the reputation exchange requests from the CSs
 # ToDo: CHANGE THIS FUNCTION
@@ -282,6 +288,7 @@ def api_verify_reputation_exchange():
 
     response = {'verified': verified}
     return jsonify(response)
+
 
 if __name__ == '__main__':
     app.run(port=5001)

@@ -85,7 +85,3 @@ class CS(object):
 
         return response
 
-    def test(self):
-        bitcoin_address = bc_address_from_cert(self.data_path + CERT)
-        print bitcoin_address
-
