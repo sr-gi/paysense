@@ -1,14 +1,15 @@
-__author__ = 'sdelgado'
-
 from base64 import b64encode
 from os import path
 from os import remove
 import time
+import ConfigParser
 
 from flask import Flask, request, jsonify
 from M2Crypto import X509, EC, EVP, BIO, ASN1
 
 from bitcointools import public_key_to_bc_address, get_pub_key_hex, history_testnet
+
+__author__ = 'sdelgado'
 
 ############################
 #     GLOBAL VARIABLES     #
@@ -20,8 +21,10 @@ ACA_KEY = 'private/paysense.key'
 CS_CERTS_PATH = 'certs/'
 
 # Bitcoin address of the DCS (globally known)
-DCS_BC_ADDRESS = 'mqcKJjxaaUcG37MFA3jvyDkaznWs4kyLyg'
+config = ConfigParser.ConfigParser()
+config.read("paysense.conf")
 
+DCS_BC_ADDRESS = config.get("BitcoinAddresses", "DCS", )
 
 ############################
 #        FUNCTIONS         #

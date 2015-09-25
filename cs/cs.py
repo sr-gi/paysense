@@ -1,6 +1,5 @@
-__author__ = 'sdelgado'
-
 from base64 import b64encode
+import ConfigParser
 import urllib2
 
 from bitcointools import *
@@ -9,20 +8,28 @@ from flask import json
 from M2Crypto import EC
 from random import randint
 
+__author__ = 'sdelgado'
+
 P_KEY = 'paysense_public.key'
 S_KEY = 'private/paysense.key'
 CERT = 'paysense.crt'
 WIF = 'wif_qr.png'
 
-class CS(object):
+config = ConfigParser.ConfigParser()
+config.read("paysense.conf")
 
+DCS = config.get("Servers", "DCS", )
+ACA = config.get("Servers", "ACA", )
+
+
+class CS(object):
     def __init__(self, data_path):
         self.data_path = data_path
 
     # CS registration
     # ToDo: Change this function to use blind signatures
     def registration(self):
-        response = urllib2.urlopen('http://127.0.0.1:5001/sign_in?bitcoin_address=')
+        response = urllib2.urlopen(ACA + '/sign_in?bitcoin_address=')
         data = json.load(response)
         public_key = data["public_key"]
         private_key = data["private_key"]
@@ -62,7 +69,7 @@ class CS(object):
             f.close()
             data['cs_pem_data'] = cs_pem_data
 
-        r = requests.post('http://127.0.0.1:5000', data=json.dumps(data), headers=headers)
+        r = requests.post(DCS, data=json.dumps(data), headers=headers)
 
         return r.status_code, r.reason, r.content
 
@@ -76,12 +83,11 @@ class CS(object):
         if outside_bc_address is not None:
             # ToDo: Perform a proper way to withdraw reputation
             reputation_withdraw = (float(randint(2, 5)) / 100) * address_balance
-            single_payment(self.data_path + S_KEY, bitcoin_address, new_bc_address, address_balance, outside_bc_address, int(reputation_withdraw))
+            single_payment(self.data_path + S_KEY, bitcoin_address, new_bc_address, address_balance, outside_bc_address,
+                           int(reputation_withdraw))
         else:
             single_payment(self.data_path + S_KEY, bitcoin_address, new_bc_address, address_balance)
 
-
-        response = urllib2.urlopen('http://127.0.0.1:5001/reputation_exchange?new_bc_address=' + new_bc_address)
+        response = urllib2.urlopen(ACA + '/reputation_exchange?new_bc_address=' + new_bc_address)
 
         return response
-

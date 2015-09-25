@@ -1,14 +1,16 @@
-__author__ = 'sdelgado'
-
+import urllib2
+import ConfigParser
 from M2Crypto import X509, EC
 from flask import Flask, request
-import urllib2
 from base64 import b64decode
 from bitcointransactions import single_payment
+
+__author__ = 'sdelgado'
 
 S_KEY = 'private/paysense.key'
 CERT = 'paysense.crt'
 DEFAULT_AMOUNT = 1000
+
 
 # Gets the CS certificate from the ACA in pem format
 # @bitcoin_address is the bitcoin address that identifies the CS
@@ -18,6 +20,7 @@ def get_cs_pem_data(bitcoin_address):
     pem_data = b64decode(response.read())
 
     return pem_data
+
 
 # Gets the ACA certificate in pem format
 # @return ACA certificate in pem format
@@ -55,6 +58,7 @@ def verify_data(message, signature, bitcoin_address, cs_pem_data=None):
 
     return {'ca': ca_verify, 'cs': cs_verify}
 
+
 def pay_to_cs(bitcoin_address, amount=None):
     if amount is None:
         amount = DEFAULT_AMOUNT
@@ -67,6 +71,7 @@ def pay_to_cs(bitcoin_address, amount=None):
 ############################
 
 app = Flask(__name__)
+
 
 # Serves the sensed data recollection from the CSs
 @app.route('/', methods=['POST'])
@@ -102,8 +107,9 @@ if __name__ == '__main__':
     global BC_ADDRESS
 
     # Get the current bitcoin address of the DCS
-    f = open('bitcoin_address.txt', 'r')
-    BC_ADDRESS = f.read()
-    f.close()
+    config = ConfigParser.ConfigParser()
+    config.read("paysense.conf")
+
+    BC_ADDRESS = config.get("BitcoinAddresses", "DCS", )
 
     app.run()
