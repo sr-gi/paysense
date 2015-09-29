@@ -1,7 +1,4 @@
 import requests
-
-__author__ = 'sdelgado'
-
 import qrcode
 from base58 import b58encode
 from binascii import a2b_hex, b2a_hex
@@ -10,6 +7,8 @@ from subprocess import check_output, STDOUT
 from bitcoin import *
 from flask import json
 from M2Crypto import X509
+
+__author__ = 'sdelgado'
 
 
 PUBKEY_HASH = 0
@@ -296,11 +295,14 @@ def insert_signature(tx, index, signature, public_key):
 # @amount is the amount of each one of the parts
 # @parts is the number of parts of @amount generated
 # @return the bitcoin network response to the transaction pushing
-def split_bitcoins(bc_address, private_key, amount, parts, priority='small'):
+def split_bitcoins(bc_address, private_key, amount, parts, priority='small', fee=False):
 
     unspent_transactions = blockr_unspent(bc_address, 'testnet')
 
-    necessary_amount, total_amount = get_necessary_amount(unspent_transactions, amount * parts, priority)
+    if fee:
+        necessary_amount, total_amount = get_necessary_amount(unspent_transactions, amount * (parts + 1), priority)
+    else:
+        necessary_amount, total_amount = get_necessary_amount(unspent_transactions, amount * parts, priority)
 
     outs = []
 
@@ -308,7 +310,10 @@ def split_bitcoins(bc_address, private_key, amount, parts, priority='small'):
         outs.append({'value': amount, 'address': bc_address})
         total_amount -= amount
 
-    outs.append({'value': total_amount, 'address': bc_address})
+    if fee:
+        outs.append({'value': total_amount - amount, 'address': bc_address})
+    else:
+        outs.append({'value': total_amount, 'address': bc_address})
 
     tx = mktx(necessary_amount, outs)
 
@@ -316,6 +321,10 @@ def split_bitcoins(bc_address, private_key, amount, parts, priority='small'):
         tx = sign(tx, i, private_key)
 
     print tx
-    response = push_tx(tx)
+
+    if fee:
+        response = blockr_pushtx(tx, "testnet")
+    else:
+        response = push_tx(tx)
 
     return response

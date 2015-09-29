@@ -1,4 +1,4 @@
-from base64 import b64encode
+from base64 import b64encode, b64decode
 from os import path
 from os import remove
 import time
@@ -155,7 +155,7 @@ def generate_keys():
     ec = EC.gen_params(EC.NID_secp256k1)
     ec.gen_key()
 
-    # Generate a Pkey object to store the EC keys
+    # Generate a pkey object to store the EC keys
     mem = BIO.MemoryBuffer()
     ec.save_pub_key_bio(mem)
     ec.save_key_bio(mem, None)
@@ -293,5 +293,18 @@ def api_verify_reputation_exchange():
     return jsonify(response)
 
 
+def test():
+
+    CSR = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUI3VENDQVpNQ0FRQXdDZ1lJS29aSXpqMEVBd0l3Z1lZeEN6QUpCZ05WQkFZVEFrTlVNUkl3RUFZRFZRUUkKREFsQ1lYSmpaV3h2Ym1FeEV6QVJCZ05WQkFjTUNrSmxiR3hoZEdWeWNtRXhFVEFQQmdOVkJBb01DRkJoZVZObApibk5sTVF3d0NnWURWUVFMREFOQlEwRXhEREFLQmdOVkJBTU1BMEZEUVRFZk1CMEdDU3FHU0liM0RRRUpBUllRCllXTmhRR1JsYVdNdWRXRmlMbU5oZERBZUZ3MHhOVEE1TWpreE5UQXhNak5hRncweE5qQTVNamd4TlRBeE1qTmEKTUlHQU1Rc3dDUVlEVlFRR0V3SkRWREVTTUJBR0ExVUVDQXdKUW1GeVkyVnNiMjVoTVJNd0VRWURWUVFIREFwQwpaV3hzWVhSbGNuSmhNUXd3Q2dZRFZRUUtEQU5WUVVJeERUQUxCZ05WQkFzTUJFUkZTVU14S3pBcEJnTlZCQU1NCkltMXFXa280YjNaVldFdDJOa1EwUjFCTk9URldjVFZ6UjFjNVFXNW9VMjgwWkV3d1ZqQVFCZ2NxaGtqT1BRSUIKQmdVcmdRUUFDZ05DQUFSVjh2OVRzdm0xQ3VxeVNJSEROdDZpRm1ZdWRWZ0IxaHVhQzhHZU1FK05BejZRaTJQQgo1KzcyQno4QlptSGlxNnllSG5sRG9JRWcvQkxuTG0zYkJUV2xNQW9HQ0NxR1NNNDlCQU1DQTBnQU1FVUNJRGtzClVXU1NqVHE5bFBrZFgwZDhhK2JMM1piM2c1Vzd5ZGlrZTE1WEJHOGtBaUVBaHFvQVV1cHhweDRUdzlpWFZhRHEKUWE5Mzhsb0poenAvbVZ6RTZMNllob1U9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
+    cert = X509.load_cert_string(b64decode(CSR))
+
+    # Load ACA private key
+    ca_pkey = EVP.load_key(ACA_KEY)
+
+    cert.sign(ca_pkey, md='sha256')
+
+    print cert.as_text()
+
 if __name__ == '__main__':
-    app.run(port=5001)
+    #app.run(port=5001)
+    test()

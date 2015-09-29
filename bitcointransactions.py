@@ -1,6 +1,8 @@
-__author__ = 'sdelgado'
 from bitcointools import *
 from bitcoin import *
+
+__author__ = 'sdelgado'
+
 
 # Performs a bitcoin transaction from a single user (inputs to be signed just by one private key)
 # @s_key is the OpenSSl private key object representing the elliptic curve private key

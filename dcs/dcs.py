@@ -63,7 +63,7 @@ def pay_to_cs(bitcoin_address, amount=None):
     if amount is None:
         amount = DEFAULT_AMOUNT
 
-    single_payment(S_KEY, BC_ADDRESS, bitcoin_address, amount)
+    single_payment(S_KEY, BC_ADDRESS, bitcoin_address, amount, fee=amount)
 
 
 ############################
