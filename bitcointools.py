@@ -8,7 +8,7 @@ from bitcoin import *
 from flask import json
 from M2Crypto import X509
 
-__author__ = 'sdelgado'
+
 
 
 PUBKEY_HASH = 0
@@ -112,7 +112,7 @@ def private_key_to_wif(private_key, mode='text', v=None):
 
 
 # Gets the bitcoin address form a PaySense x.509 certificate (stored in the CN field)
-# @certificate is the X.509 object containing the certificate information
+# @certificate is the path of a file containing a X.509 certificate
 # @return the corresponding bitcoin address
 def bc_address_from_cert(certificate):
     certificate = X509.load_cert(certificate)

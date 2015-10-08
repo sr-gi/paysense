@@ -2,76 +2,11 @@ import urllib2
 from bitcointools import *
 from bitcoin import *
 from bitcoinrpc.authproxy import AuthServiceProxy
-from M2Crypto import EC, BIO, EVP, ASN1
+from M2Crypto import EC, BIO, EVP, ASN1, RSA
 from base64 import b64encode, b64decode
 
 __author__ = 'sdelgado'
 ACA = "http://127.0.0.1:5001"
-
-
-def generate_keys():
-    # Generate the elliptic curve and the keys
-    ec = EC.gen_params(EC.NID_secp256k1)
-    ec.gen_key()
-
-    # Generate a Pkey object to store the EC keys
-    mem = BIO.MemoryBuffer()
-    ec.save_pub_key_bio(mem)
-    ec.save_key_bio(mem, None)
-    pk = EVP.load_key_bio(mem)
-
-    # Generate the bitcoin address from the public key
-    public_key_hex = get_pub_key_hex(ec.pub())
-    bitcoin_address = public_key_to_bc_address(public_key_hex, 'test')
-
-    # Save both keys
-    ec.save_key(bitcoin_address + '_key.pem', None)
-    ec.save_pub_key(bitcoin_address + '_public_key.pem')
-
-    return pk, bitcoin_address
-
-
-def generate_certificate(bc_address, pkey):
-
-    # Get ACA information
-    aca_cert_text = b64decode(urllib2.urlopen(ACA + '/get_ca_cert').read())
-
-    aca_cert = X509.load_cert_string(aca_cert_text)
-
-    issuer = aca_cert.get_issuer()
-
-    # Creating a certificate
-    cert = X509.X509()
-
-    # Set issuer
-    cert.set_issuer(issuer)
-
-    # Generate CS information
-    cert_name = X509.X509_Name()
-    cert_name.C = 'CT'
-    cert_name.ST = 'Barcelona'
-    cert_name.L = 'Bellaterra'
-    cert_name.O = 'UAB'
-    cert_name.OU = 'DEIC'
-    cert_name.CN = bc_address
-    cert.set_subject_name(cert_name)
-
-    # Set public_key
-    cert.set_pubkey(pkey)
-
-    # Time for certificate to stay valid
-    cur_time = ASN1.ASN1_UTCTIME()
-    cur_time.set_time(int(time.time()))
-    # Expire certs in 1 year.
-    expire_time = ASN1.ASN1_UTCTIME()
-    expire_time.set_time(int(time.time()) + 60 * 60 * 24 * 365)
-    # Set the validity
-    cert.set_not_before(cur_time)
-    cert.set_not_after(expire_time)
-
-    # Sign the certificate using the CA Private Key
-    cert.sign(pkey, md='sha256')
-    print b64encode(cert.as_pem())
 
 
 def rpc_test(bc_address):
@@ -111,11 +46,7 @@ def main():
     bc_address = "mjZJ8ovUXKv6D4GPM91Vq5sGW9AnhSo4dL"
     #rpc_test(bc_address)
     #print count_splits(bc_address)
-    #split(bc_address)
-
-    pkey = EVP.load_key("cs/CSs/CS0/private/paysense.key")
-    generate_certificate(bc_address, pkey)
-
+    split(bc_address)
 
 if __name__ == '__main__':
     main()

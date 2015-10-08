@@ -1,13 +1,11 @@
 from base64 import b64encode, b64decode
 from os import path
-from os import remove
-import time
 import ConfigParser
 
 from flask import Flask, request, jsonify
-from M2Crypto import X509, EC, EVP, BIO, ASN1
+from M2Crypto import EVP
 
-from bitcointools import public_key_to_bc_address, get_pub_key_hex, history_testnet
+from bitcointools import history_testnet
 
 __author__ = 'sdelgado'
 
@@ -25,6 +23,7 @@ config = ConfigParser.ConfigParser()
 config.read("paysense.conf")
 
 DCS_BC_ADDRESS = config.get("BitcoinAddresses", "DCS", )
+
 
 ############################
 #        FUNCTIONS         #
@@ -56,120 +55,14 @@ def check_payers(history, expected_payer=None):
     return validation
 
 
-# Generates a JSon-like response with the public and private key, and the certificate of the requester CS.
-# ToDO: CHANGE THIS FUNCTION
-# Once the CS registration is done using blind signatures, the CS should send a CSR to the ACA. The ACA will response
-# only with the generated certificate, both keys will be in possession of the CS instead of the ACA.
-def generate_response(bitcoin_address):
-    # Get data from the pem file, and generate a response
-    f = open(bitcoin_address + '_key.pem')
-    private_key = f.read()
-    f.close()
-    f = open(bitcoin_address + '_public_key.pem')
-    public_key = f.read()
-    f.close()
-    f = open(CS_CERTS_PATH + bitcoin_address + '.pem')
-    certificate = f.read()
-    f.close()
-    data = {'public_key': public_key, 'private_key': private_key, 'certificate': certificate}
-
-    # Delete the CS keys
-    remove(bitcoin_address + '_public_key.pem')
-    remove(bitcoin_address + '_key.pem')
-
-    return data
-
-
 # Stores a certificate in the certificates path
-# @certificate is the certificate object with all the necessary information
+# @certificate is a String representation of the certificate
 # @bitcoin_address is the name that will be used to store this certificate. This name matches with the bitcoin address
 # of the CS.
 def store_certificate(certificate, bitcoin_address):
-    # Save the pem data into the pem file
-    certificate.save_pem(CS_CERTS_PATH + bitcoin_address + '.pem')
-
-    # In order to write the human readable certificate before the encoded data we should load the data just stored
-    # and append at the end of the file.
-    f = open(CS_CERTS_PATH + bitcoin_address + '.pem', 'r')
-    data = f.read()
-    f.close()
     f = open(CS_CERTS_PATH + bitcoin_address + '.pem', 'w')
-    f.write(certificate.as_text())
-    f.write(data)
+    f.write(certificate)
     f.close()
-
-
-# Generates a certificate for a requester CS
-# @pkey is an object that represents the CS public key (elliptic curve key).
-# @bitcoin_address is the identifier of the CS, that will be placed in the CN of the certificate
-def generate_certificate(pkey, bitcoin_address):
-    # Load ACA certificate
-    ca_cert = X509.load_cert(ACA_CERT)
-    # Load ACA private key
-    ca_pkey = EVP.load_key(ACA_KEY)
-
-    ca_cert.get_issuer()
-
-    # Creating a certificate
-    cert = X509.X509()
-
-    # Set CA data
-    cert.set_issuer_name(ca_cert.get_subject())
-
-    # Set CS data
-    cert_name = X509.X509_Name()
-    cert_name.C = 'CA'
-    cert_name.ST = 'Barcelona'
-    cert_name.L = 'Bellaterra'
-    cert_name.O = 'UAB'
-    cert_name.OU = 'DEIC'
-    cert_name.CN = bitcoin_address
-    cert.set_subject_name(cert_name)
-
-    # Set public_key
-    cert.set_pubkey(pkey)
-
-    # Time for certificate to stay valid
-    cur_time = ASN1.ASN1_UTCTIME()
-    cur_time.set_time(int(time.time()))
-    # Expire certs in 1 year.
-    expire_time = ASN1.ASN1_UTCTIME()
-    expire_time.set_time(int(time.time()) + 60 * 60 * 24 * 365)
-    # Set the validity
-    cert.set_not_before(cur_time)
-    cert.set_not_after(expire_time)
-
-    # Sign the certificate using the CA Private Key
-    cert.sign(ca_pkey, md='sha256')
-
-    # Store certificate
-    store_certificate(cert, bitcoin_address)
-
-
-# Generates a elliptic curve key pair that will be sent lately to the CS.
-# ToDO: DELETE THIS FUNCTION
-# This function should be deleted once the registration is done using blind signatures, the key pair will be already
-# in possession of the CS.
-def generate_keys():
-    # Generate the elliptic curve and the keys
-    ec = EC.gen_params(EC.NID_secp256k1)
-    ec.gen_key()
-
-    # Generate a pkey object to store the EC keys
-    mem = BIO.MemoryBuffer()
-    ec.save_pub_key_bio(mem)
-    ec.save_key_bio(mem, None)
-    pk = EVP.load_key_bio(mem)
-
-    # Generate the bitcoin address from the public key
-    public_key_hex = get_pub_key_hex(ec.pub())
-    bitcoin_address = public_key_to_bc_address(public_key_hex, 'test')
-
-    # Save both keys
-    ec.save_key(bitcoin_address + '_key.pem', None)
-    ec.save_pub_key(bitcoin_address + '_public_key.pem')
-
-    return pk, bitcoin_address
 
 
 # Returns a CS certificate
@@ -230,24 +123,28 @@ def api_get_ca_pem():
 
 
 # Serves the registration requests from the CS
-# ToDO: CHANGE THIS FUNCTION
-# This is a workaround, in this first version the ACA generates either the keys and the certificate.
-# Once the registration is done using blind signatures, the bitcoin address and the public key should be
-# obtained with the request
-@app.route('/sign_in', methods=['GET'])
-def api_sign_in():
-    # Get the bitcoin_address from the url
-    # bitcoin_address = request.args.get('bitcoin_address')
-    # pk = generate_keys(bitcoin_address)
-    pk, bitcoin_address = generate_keys()
+@app.route('/sign_in', methods=['POST'])
+def api_sign_in2():
+    signature = None
+    if request.headers['Content-Type'] == 'application/json':
+        message = str(request.json.get("cert_hash"))
+        hash = b64decode(message)
 
-    # Generate the digital certificate
-    generate_certificate(pk, bitcoin_address)
+        ca_pkey = EVP.load_key(ACA_KEY)
 
-    # Send response to the CS
-    response = generate_response(bitcoin_address)
+        signature = ca_pkey.get_rsa().sign(hash, "sha256")
 
-    return jsonify(response)
+    return b64encode(signature)
+
+
+# Serves the certificate storage received from the CSs
+@app.route('/store_certificate', methods=['POST'])
+def api_store_cert():
+    if request.headers['Content-Type'] == 'application/json':
+        certificate = str(request.json.get("certificate"))
+        bitcoin_address = str(request.json.get("bitcoin_address"))
+
+        store_certificate(certificate, bitcoin_address)
 
 
 # Serves the reputation exchange requests from the CSs
@@ -293,18 +190,5 @@ def api_verify_reputation_exchange():
     return jsonify(response)
 
 
-def test():
-
-    CSR = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUI3VENDQVpNQ0FRQXdDZ1lJS29aSXpqMEVBd0l3Z1lZeEN6QUpCZ05WQkFZVEFrTlVNUkl3RUFZRFZRUUkKREFsQ1lYSmpaV3h2Ym1FeEV6QVJCZ05WQkFjTUNrSmxiR3hoZEdWeWNtRXhFVEFQQmdOVkJBb01DRkJoZVZObApibk5sTVF3d0NnWURWUVFMREFOQlEwRXhEREFLQmdOVkJBTU1BMEZEUVRFZk1CMEdDU3FHU0liM0RRRUpBUllRCllXTmhRR1JsYVdNdWRXRmlMbU5oZERBZUZ3MHhOVEE1TWpreE5UQXhNak5hRncweE5qQTVNamd4TlRBeE1qTmEKTUlHQU1Rc3dDUVlEVlFRR0V3SkRWREVTTUJBR0ExVUVDQXdKUW1GeVkyVnNiMjVoTVJNd0VRWURWUVFIREFwQwpaV3hzWVhSbGNuSmhNUXd3Q2dZRFZRUUtEQU5WUVVJeERUQUxCZ05WQkFzTUJFUkZTVU14S3pBcEJnTlZCQU1NCkltMXFXa280YjNaVldFdDJOa1EwUjFCTk9URldjVFZ6UjFjNVFXNW9VMjgwWkV3d1ZqQVFCZ2NxaGtqT1BRSUIKQmdVcmdRUUFDZ05DQUFSVjh2OVRzdm0xQ3VxeVNJSEROdDZpRm1ZdWRWZ0IxaHVhQzhHZU1FK05BejZRaTJQQgo1KzcyQno4QlptSGlxNnllSG5sRG9JRWcvQkxuTG0zYkJUV2xNQW9HQ0NxR1NNNDlCQU1DQTBnQU1FVUNJRGtzClVXU1NqVHE5bFBrZFgwZDhhK2JMM1piM2c1Vzd5ZGlrZTE1WEJHOGtBaUVBaHFvQVV1cHhweDRUdzlpWFZhRHEKUWE5Mzhsb0poenAvbVZ6RTZMNllob1U9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
-    cert = X509.load_cert_string(b64decode(CSR))
-
-    # Load ACA private key
-    ca_pkey = EVP.load_key(ACA_KEY)
-
-    cert.sign(ca_pkey, md='sha256')
-
-    print cert.as_text()
-
 if __name__ == '__main__':
-    #app.run(port=5001)
-    test()
+    app.run(port=5001)
