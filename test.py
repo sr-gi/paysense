@@ -1,9 +1,6 @@
-import urllib2
 from bitcointools import *
 from bitcoin import *
 from bitcoinrpc.authproxy import AuthServiceProxy
-from M2Crypto import EC, BIO, EVP, ASN1, RSA
-from base64 import b64encode, b64decode
 
 __author__ = 'sdelgado'
 ACA = "http://127.0.0.1:5001"

@@ -3,7 +3,7 @@ from os import path
 import ConfigParser
 
 from flask import Flask, request, jsonify
-from M2Crypto import EVP
+from M2Crypto import EVP, X509
 
 from bitcointools import history_testnet
 
@@ -60,9 +60,19 @@ def check_payers(history, expected_payer=None):
 # @bitcoin_address is the name that will be used to store this certificate. This name matches with the bitcoin address
 # of the CS.
 def store_certificate(certificate, bitcoin_address):
-    f = open(CS_CERTS_PATH + bitcoin_address + '.pem', 'w')
-    f.write(certificate)
-    f.close()
+
+    ca_pkey = EVP.load_key(ACA_KEY)
+    cert = X509.load_cert_string(certificate)
+
+    if cert.verify(ca_pkey):
+        f = open(CS_CERTS_PATH + bitcoin_address + '.pem', 'w')
+        f.write(certificate)
+        f.close()
+        response = "OK"
+    else:
+        response = "Bad Certificate"
+
+    return response
 
 
 # Returns a CS certificate
@@ -124,7 +134,7 @@ def api_get_ca_pem():
 
 # Serves the registration requests from the CS
 @app.route('/sign_in', methods=['POST'])
-def api_sign_in2():
+def api_sign_in():
     signature = None
     if request.headers['Content-Type'] == 'application/json':
         message = str(request.json.get("cert_hash"))
@@ -144,7 +154,10 @@ def api_store_cert():
         certificate = str(request.json.get("certificate"))
         bitcoin_address = str(request.json.get("bitcoin_address"))
 
-        store_certificate(certificate, bitcoin_address)
+        response = store_certificate(certificate, bitcoin_address)
+    else:
+        response = "Bad request"
+    return response
 
 
 # Serves the reputation exchange requests from the CSs
@@ -180,7 +193,7 @@ def api_verify_reputation_exchange():
 
         # If it's verified that there's only one from address in the history transaction of the new address, the correctness
         # of the transactions from the old_address is checked.
-        if verified == True:
+        if verified:
             old_history = history_testnet(old_bc_address)
             # ToDo: Think how to verify the correctness of the transactions from the old bitcoin address. We could calculate the amount of bitcoins
             # ToDo: that came from the DCS, and check if it is lower than the reputation transferred, or directly check the reputation value stored in the DCS

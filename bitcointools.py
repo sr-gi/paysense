@@ -8,9 +8,6 @@ from bitcoin import *
 from flask import json
 from M2Crypto import X509
 
-
-
-
 PUBKEY_HASH = 0
 TESTNET_PUBKEY_HASH = 111
 WIF = 128
@@ -56,6 +53,7 @@ def public_key_to_bc_address(public_key, v=None):
 # Gets a public key in hexadecimal format from a OpenSSL public key object
 # @public_key is an OpenSSL public key object
 # @return the hexadecimal representation of the public key
+# ToDO: Change the function to use pyasn1 instead of asn1tinydecoder
 def get_pub_key_hex(public_key):
     der = public_key.get_der()
     root = asn1_node_root(der)
@@ -211,7 +209,7 @@ def get_necessary_amount(unspent_transactions, amount, priority='small'):
         if priority == 'big':
             unspent_bitcoins = sorted(unspent_transactions, key=lambda item: item['value'], reverse=True)
         else:
-        # Sort the transactions from less to more amount
+            # Sort the transactions from less to more amount
             unspent_bitcoins = sorted(unspent_transactions, key=lambda item: item['value'])
 
         # Get all the values from the unspent transactions
@@ -296,7 +294,6 @@ def insert_signature(tx, index, signature, public_key):
 # @parts is the number of parts of @amount generated
 # @return the bitcoin network response to the transaction pushing
 def split_bitcoins(bc_address, private_key, amount, parts, priority='small', fee=False):
-
     unspent_transactions = blockr_unspent(bc_address, 'testnet')
 
     if fee:

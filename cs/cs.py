@@ -1,11 +1,10 @@
-from base64 import b64encode
 import ConfigParser
 import urllib2
 
 from bitcointools import *
 from bitcointransactions import single_payment
 from flask import json
-from M2Crypto import EC, BIO, EVP, ASN1, RSA
+from M2Crypto import EC, BIO, EVP, ASN1, RSA, X509
 from base64 import b64encode, b64decode
 from random import randint
 from hashlib import sha256
@@ -110,13 +109,13 @@ class CS(object):
         cert.set_not_before(cur_time)
         cert.set_not_after(expire_time)
 
-        # Sign the certificate using the same key type the CA is going to use later
-        rsa_keys = RSA.gen_key(2046, 65537)
+        # # Sign the certificate using the same key type the CA is going to use later
+        rsa_keys = RSA.gen_key(2046, 65537, callback=lambda x, y, z: None)
         pkey = EVP.PKey()
         pkey.assign_rsa(rsa_keys)
         cert.sign(pkey, md='sha256')
 
-        # Load the Certificate as a ASN.1 object and extract the TBS Certificate
+        # Load the Certificate as a ASN.1 object and extract the TBS Certificate (special thanks to Alex <ralienpp@gmail.com>)
         asn1_cert = decoder.decode(cert.as_der(), asn1Spec=Certificate())[0]
         tbs = asn1_cert.getComponentByName("tbsCertificate")
 
@@ -137,7 +136,7 @@ class CS(object):
         data = {'cert_hash': cert_hash}
 
         # Contact the ACA and send her the certificate hash to be signed
-        r = requests.post(ACA + "/sign_in2", data=json.dumps(data), headers=headers)
+        r = requests.post(ACA + "/sign_in", data=json.dumps(data), headers=headers)
 
         # Attach the signature to the certificate
         signature = b64decode(r.content)
@@ -156,6 +155,8 @@ class CS(object):
         # Send the final certificate to the ACA
         data = {'certificate': certificate, 'bitcoin_address': self.bc_address}
         r = requests.post(ACA + "/store_certificate", data=json.dumps(data), headers=headers)
+
+        return r.content
 
     # Reports the data gathered by the CS
     def report_data(self, message, certificate=False):
