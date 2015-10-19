@@ -14,7 +14,7 @@ WIF = 128
 TESTNET_WIF = 239
 
 
-# Calculates the RIPEMD-160 of a given elliptic curve public key
+# Calculates the RIPEMD-160 of a.py given elliptic curve public key
 # @public_key is an elliptic curve public key
 # @return the RIPEMD-160 hash
 def hash_160(public_key):
@@ -24,7 +24,7 @@ def hash_160(public_key):
     return md.digest()
 
 
-# Calculates the bitcoin address of a given RIPEMD-160 hash from a elliptic curve public key
+# Calculates the bitcoin address of a.py given RIPEMD-160 hash from a.py elliptic curve public key
 # @h160 is the RIPEMD-160 hash
 # @v is the version (prefix) used to calculate the bitcoin address, it depends on the type of network (0 for normal network
 # and 111 for testnet)
@@ -36,8 +36,8 @@ def hash_160_to_bc_address(h160, v):
     return b58encode(addr)
 
 
-# Calculates the bitcoin address of a given elliptic curve public key
-# @public_key is a elliptic curve public key in hexadecimal format
+# Calculates the bitcoin address of a.py given elliptic curve public key
+# @public_key is a.py elliptic curve public key in hexadecimal format
 # @v is the version (prefix) used to calculate the bitcoin address, it depends on the type of network (0 for normal network
 # and 111 for testnet)
 # @return the corresponding bitcoin address
@@ -50,7 +50,7 @@ def public_key_to_bc_address(public_key, v=None):
     return hash_160_to_bc_address(h160, v)
 
 
-# Gets a public key in hexadecimal format from a OpenSSL public key object
+# Gets a.py public key in hexadecimal format from a.py OpenSSL public key object
 # @public_key is an OpenSSL public key object
 # @return the hexadecimal representation of the public key
 # ToDO: Change the function to use pyasn1 instead of asn1tinydecoder
@@ -61,10 +61,10 @@ def get_pub_key_hex(public_key):
     return key[2:]
 
 
-# Gets a private key in hexadecimal format from a key file
+# Gets a.py private key in hexadecimal format from a.py key file
 # @pk_file_path is the system path where the private key is found
 # @return the hexadecimal representation of the private key
-# ToDO: Find a way to get the SK without a system call
+# ToDO: Find a.py way to get the SK without a.py system call
 def get_priv_key_hex(pk_file_path):
     cmd = ['openssl', 'ec', '-in', pk_file_path, '-text', '-noout']
     response = check_output(cmd, stderr=STDOUT)
@@ -83,7 +83,7 @@ def get_priv_key_hex(pk_file_path):
     return private_key_hex
 
 
-# Calculates the wallet input format (WIF) of a given elliptic curve private key
+# Calculates the wallet input format (WIF) of a.py given elliptic curve private key
 # @private_key is an elliptic curve private key in hex format
 # # @v is the version (prefix) used to calculate the WIF, it depends on the type of network (128 for normal network
 # and 239 for testnet)
@@ -109,8 +109,8 @@ def private_key_to_wif(private_key, mode='text', v=None):
     return response
 
 
-# Gets the bitcoin address form a PaySense x.509 certificate (stored in the CN field)
-# @certificate is the path of a file containing a X.509 certificate
+# Gets the bitcoin address form a.py PaySense x.509 certificate (stored in the CN field)
+# @certificate is the path of a.py file containing a.py X.509 certificate
 # @return the corresponding bitcoin address
 def bc_address_from_cert(certificate):
     certificate = X509.load_cert(certificate)
@@ -120,9 +120,9 @@ def bc_address_from_cert(certificate):
     return bc_address
 
 
-# Gets the basic information from a given bitcoin transaction of the testnet (input address, output address, and bitcoin amount)
+# Gets the basic information from a.py given bitcoin transaction of the testnet (input address, output address, and bitcoin amount)
 # @tx is the transaction
-# @return a JSon object containing the input address, the output address, the bitcoin amount transferred in the transaction and the number of confirmations
+# @return a.py JSon object containing the input address, the output address, the bitcoin amount transferred in the transaction and the number of confirmations
 def tx_info(tx):
     input_addresses = []
     output_addresses = []
@@ -143,7 +143,7 @@ def tx_info(tx):
     return {'from': input_addresses, 'to': output_addresses, 'amount': payments, 'confirmations': confirmations}
 
 
-# Gets the history of transaction from a given bitcoin address from the testnet. This function is analogous to the
+# Gets the history of transaction from a.py given bitcoin address from the testnet. This function is analogous to the
 # vbuterin's history function from the bitcointools library (used all over the code) but using testnet instead of normal
 # bitcoin network
 # @bitcoin_address is the given bitcoin address
@@ -161,10 +161,10 @@ def history_testnet(bitcoin_address):
     return history
 
 
-# Pushes a tx to the bitcoin network (to the testnet by default) with 0 fees
+# Pushes a.py tx to the bitcoin network (to the testnet by default) with 0 fees
 # @tx is the transaction to be pushed
 # @network is the network where the transaction will be pushed
-# @return a result consisting on a code (201 if success), a response reason, and the hash of the transaction
+# @return a.py result consisting on a.py code (201 if success), a.py response reason, and the hash of the transaction
 def push_tx(tx, network='testnet'):
     if network in ['testnet', 'main']:
         if network is 'testnet':
@@ -185,7 +185,7 @@ def push_tx(tx, network='testnet'):
     return r_code, r_reason, tx_hash
 
 
-# Gets the balance of a given bitcoin address from a given network
+# Gets the balance of a.py given bitcoin address from a.py given network
 # @bitcoin_address is the bitcoin address from which the balance will be calculated
 # @network is the bitcoin network where the address comes from (testnet by default)
 # @return the bitcoin address balance (in Satoshi)
@@ -250,7 +250,7 @@ def get_necessary_amount(unspent_transactions, amount, priority='small'):
     return necessary_amount, total_amount
 
 
-# Computes the signature from a given transaction
+# Computes the signature from a.py given transaction
 # @tx is the input transaction
 # @private_key is the elliptic curve private key (in hex format) used to sign
 # @hashcode indicates which parts of the transaction will be signed. It is set to all by default
@@ -276,7 +276,7 @@ def get_tx_signature(tx, private_key, bc_address, hashcode=SIGHASH_ALL):
     return response
 
 
-# Inserts a given transaction signature into a given transaction
+# Inserts a.py given transaction signature into a.py given transaction
 # @tx is the input transaction
 # @index is the input index of the transaction in which the signature must be placed
 # @public_key is the elliptic curve public key (in hex format) used to insert the signature in the corresponding input
@@ -287,8 +287,8 @@ def insert_signature(tx, index, signature, public_key):
     return serialize(tx_obj)
 
 
-# Split a large amount of bitcoins in smaller parts.
-# @bc_address is the bitcoin address used as a source and destination of the transaction
+# Split a.py large amount of bitcoins in smaller parts.
+# @bc_address is the bitcoin address used as a.py source and destination of the transaction
 # @private_key is the private key used to sign the transaction (hex format)
 # @amount is the amount of each one of the parts
 # @parts is the number of parts of @amount generated

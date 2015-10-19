@@ -31,12 +31,12 @@ def get_ca_pem_data():
     return pem_data
 
 
-# Verifies the CS and the ACA signatures from a received sensing data
+# Verifies the CS and the ACA signatures from a.py received sensing data
 # @message is the sensed data itself
 # @signature is the signature of the data, performed by the CS
 # @bitcoin_address is the bitcoin address that identifies the CS
 # @cs_pem_data is an optional parameter that represents the certificate of the CS. If no certificate is provided,
-# the function will request one to the ACA using the @bitcoin_address as a parameter
+# the function will request one to the ACA using the @bitcoin_address as a.py parameter
 def verify_data(message, signature, bitcoin_address, cs_pem_data=None):
     if cs_pem_data is None:
         # Get CS from the ACA (pem data base64 encoded)

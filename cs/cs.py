@@ -11,6 +11,8 @@ from hashlib import sha256
 from pyasn1_modules.rfc2459 import Certificate
 from pyasn1_modules.rfc2314 import Signature
 from pyasn1.codec.der import encoder, decoder
+from Crypto.PublicKey import RSA as pyRSA
+from Crypto.Util.number import long_to_bytes
 
 __author__ = 'sdelgado'
 
@@ -26,7 +28,7 @@ DCS = config.get("Servers", "DCS", )
 ACA = config.get("Servers", "ACA", )
 
 
-# Stores a certificate in a human readable format
+# Stores a.py certificate in a.py human readable format
 # @certificate is the certificate object with all the necessary information
 def store_certificate(certificate, filename='paysense'):
         # Save the pem data into the pem file
@@ -55,7 +57,7 @@ class CS(object):
         ec = EC.gen_params(EC.NID_secp256k1)
         ec.gen_key()
 
-        # Generate a Pkey object to store the EC keys
+        # Generate a.py Pkey object to store the EC keys
         mem = BIO.MemoryBuffer()
         ec.save_pub_key_bio(mem)
         ec.save_key_bio(mem, None)
@@ -80,7 +82,7 @@ class CS(object):
 
         issuer = aca_cert.get_issuer()
 
-        # Creating a certificate
+        # Creating a.py certificate
         cert = X509.X509()
 
         # Set issuer
@@ -115,7 +117,7 @@ class CS(object):
         pkey.assign_rsa(rsa_keys)
         cert.sign(pkey, md='sha256')
 
-        # Load the Certificate as a ASN.1 object and extract the TBS Certificate (special thanks to Alex <ralienpp@gmail.com>)
+        # Load the Certificate as a.py ASN.1 object and extract the TBS Certificate (special thanks to Alex <ralienpp@gmail.com>)
         asn1_cert = decoder.decode(cert.as_der(), asn1Spec=Certificate())[0]
         tbs = asn1_cert.getComponentByName("tbsCertificate")
 
@@ -123,8 +125,9 @@ class CS(object):
         tbs_der = encoder.encode(tbs)
         digest = sha256()
         digest.update(tbs_der)
+        cert_hash = digest.digest()
 
-        return asn1_cert, b64encode(digest.digest())
+        return asn1_cert, cert_hash
 
     # CS registration
     def registration(self, filename='paysense'):
@@ -132,31 +135,46 @@ class CS(object):
         # Generate the basic certificate
         cert, cert_hash = self.generate_certificate()
 
+        # Blind the cert hash
+
+        # Get the ACA cert (ToDo: Do it properly)
+        aca_cert = X509.load_cert("../aca/paysense.crt")
+        pk = pyRSA.importKey(aca_cert.get_pubkey().as_der())
+
+        r = long(randint(1, 1000))
+        blinded_hash = pk.blind(cert_hash, r)
+
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        data = {'cert_hash': cert_hash}
-
+        data = {'cert_hash': b64encode(blinded_hash)}
+        #
         # Contact the ACA and send her the certificate hash to be signed
-        r = requests.post(ACA + "/sign_in", data=json.dumps(data), headers=headers)
+        response = requests.post(ACA + "/sign_in", data=json.dumps(data), headers=headers)
 
-        # Attach the signature to the certificate
-        signature = b64decode(r.content)
-        bin_signature = Signature("'%s'H" % ''.join("%02X" % ord(c) for c in signature))
-        cert.setComponentByName("signatureValue", bin_signature)
+        signed_b_hash = b64decode(response.content)
+        signature = pk.unblind(long(signed_b_hash), r)
 
-        # Store the certificate
-        final_cert = X509.load_cert_der_string(encoder.encode(cert))
-        store_certificate(final_cert)
+        # Check that the signature is valid
+        if pk.verify(cert_hash, [signature, 0]):
+            # Attach the signature to the certificate
+            bin_signature = Signature("'%s'H" % ''.join("%02X" % ord(c) for c in long_to_bytes(signature)))
+            cert.setComponentByName("signatureValue", bin_signature)
 
-        # Get the certificate from the just created file with it's new format
-        f = open(filename + '.crt')
-        certificate = f.read()
-        f.close()
+            # Store the certificate
+            final_cert = X509.load_cert_der_string(encoder.encode(cert))
+            store_certificate(final_cert)
 
-        # Send the final certificate to the ACA
-        data = {'certificate': certificate, 'bitcoin_address': self.bc_address}
-        r = requests.post(ACA + "/store_certificate", data=json.dumps(data), headers=headers)
+            # Get the certificate from the just created file with it's new format
+            f = open(filename + '.crt')
+            certificate = f.read()
+            f.close()
 
-        return r.content
+            # Send the final certificate to the ACA
+            data = {'certificate': certificate, 'bitcoin_address': self.bc_address}
+            r = requests.post(ACA + "/store_certificate", data=json.dumps(data), headers=headers)
+
+            return r.content
+        else:
+            return "Invalid certificate signature"
 
     # Reports the data gathered by the CS
     def report_data(self, message, certificate=False):
@@ -190,7 +208,7 @@ class CS(object):
         address_balance = get_balance(bitcoin_address)
 
         if outside_bc_address is not None:
-            # ToDo: Perform a proper way to withdraw reputation
+            # ToDo: Perform a.py proper way to withdraw reputation
             reputation_withdraw = (float(randint(2, 5)) / 100) * address_balance
             single_payment(self.data_path + S_KEY, bitcoin_address, new_bc_address, address_balance, outside_bc_address,
                            int(reputation_withdraw))

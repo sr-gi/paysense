@@ -4,7 +4,7 @@ from bitcoin import *
 __author__ = 'sdelgado'
 
 
-# Performs a bitcoin transaction from a single user (inputs to be signed just by one private key)
+# Performs a.py bitcoin transaction from a.py single user (inputs to be signed just by one private key)
 # @s_key is the OpenSSl private key object representing the elliptic curve private key
 # @source_bc_address is the CS own bitcoin address, where the bitcoins came from
 # @destination_bc_address is the bitcoin address of the new CS pseudonym, where the bitcoins will be transferred
@@ -42,7 +42,7 @@ def single_payment(s_key, source_bc_address, destination_bc_address, amount, use
         # Transfers an specific amount to the destination address, the remainder (except for the fees) is returned to the source address
         elif outside_bc_address is None or outside_amount is None:
             outs = [{'value': amount, 'address': destination_bc_address}, {'value': total_bitcoins - amount - fee, 'address': source_bc_address}]
-        # Transfers an specific amount to a destination address, and the rest (except for the fees) is sent to an outside address
+        # Transfers an specific amount to a.py destination address, and the rest (except for the fees) is sent to an outside address
         else:
             outs = [{'value': total_bitcoins - outside_amount, 'address': destination_bc_address}, {'value': outside_amount - fee, 'address': outside_bc_address}]
 

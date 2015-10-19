@@ -3,7 +3,11 @@ from os import path
 import ConfigParser
 
 from flask import Flask, request, jsonify
-from M2Crypto import EVP, X509
+from M2Crypto import X509
+from pyasn1_modules.rfc2459 import Certificate
+from pyasn1.codec.der import decoder, encoder
+from Crypto.PublicKey import RSA
+from hashlib import sha256
 
 from bitcointools import history_testnet
 
@@ -29,17 +33,17 @@ DCS_BC_ADDRESS = config.get("BitcoinAddresses", "DCS", )
 #        FUNCTIONS         #
 ############################
 
-# Checks if a certificate exists in the certificate directory
+# Checks if a.py certificate exists in the certificate directory
 # @bitcoin_address is the name of the certificate to look for
 # @return true/false depending on if the file exists or not
 def check_certificate(bitcoin_address):
     return path.exists(CS_CERTS_PATH + bitcoin_address + '.pem')
 
 
-# Checks the payers in the transaction history of a bitcoin address
+# Checks the payers in the transaction history of a.py bitcoin address
 # ToDo: FIX THIS FUNCTION
 # This function should be changed, makes no sense how it's done now.
-# It should validate that the payments come from the DCS or from a previously certified CS (just the first payment).
+# It should validate that the payments come from the DCS or from a.py previously certified CS (just the first payment).
 # To be efficient the blockchain should be analyzed only after the certification date of the CS.
 def check_payers(history, expected_payer=None):
     validation = True
@@ -56,15 +60,49 @@ def check_payers(history, expected_payer=None):
 
 
 # Stores a certificate in the certificates path
-# @certificate is a String representation of the certificate
+# @certificate is a.py String representation of the certificate
 # @bitcoin_address is the name that will be used to store this certificate. This name matches with the bitcoin address
 # of the CS.
 def store_certificate(certificate, bitcoin_address):
 
-    ca_pkey = EVP.load_key(ACA_KEY)
-    cert = X509.load_cert_string(certificate)
+    # ca_pkey = EVP.load_key(ACA_KEY)
+    # cert = X509.load_cert_string(certificate)
+    #
+    #
+    # if cert.verify(ca_pkey):
+    #     f = open(CS_CERTS_PATH + bitcoin_address + '.pem', 'w')
+    #     f.write(certificate)
+    #     f.close()
+    #     response = "OK"
+    # else:
+    #     response = "Bad Certificate"
 
-    if cert.verify(ca_pkey):
+    # Load ACA cert and public key
+    aca_cert = X509.load_cert(ACA_CERT)
+    pk = RSA.importKey(aca_cert.get_pubkey().as_der())
+
+    # Obtain the TBS certificate
+    cert = X509.load_cert_string(certificate)
+    asn1_cert = decoder.decode(cert.as_der(), asn1Spec=Certificate())[0]
+    tbs = asn1_cert.getComponentByName("tbsCertificate")
+
+    # Calculate the certificate hash
+    tbs_der = encoder.encode(tbs)
+    digest = sha256()
+    digest.update(tbs_der)
+    cert_hash = digest.digest()
+
+    # Extract the certificate signature
+    signature_bin = asn1_cert.getComponentByName("signatureValue")
+
+    # Parse the signature
+    signature_str = ""
+    for i in signature_bin:
+        signature_str += str(i)
+    signature = long(signature_str, 2)
+
+    # Check the parsed signature matches with the signature ob the obtained hash
+    if pk.verify(cert_hash, [signature, 0]):
         f = open(CS_CERTS_PATH + bitcoin_address + '.pem', 'w')
         f.write(certificate)
         f.close()
@@ -75,7 +113,7 @@ def store_certificate(certificate, bitcoin_address):
     return response
 
 
-# Returns a CS certificate
+# Returns a.py CS certificate
 # @bitcoin_address is the CS pseudonym. It is used to look for the specific file name in the certificates directory.
 # @return the requested certificate
 def get_cs_certificate(bitcoin_address):
@@ -138,13 +176,22 @@ def api_sign_in():
     signature = None
     if request.headers['Content-Type'] == 'application/json':
         message = str(request.json.get("cert_hash"))
-        hash = b64decode(message)
+        blinded_hash = b64decode(message)
 
-        ca_pkey = EVP.load_key(ACA_KEY)
+        # ca_pkey = EVP.load_key(ACA_KEY)
+        #
+        # signature = ca_pkey.get_rsa().sign(hash, "sha256")
+        # print signature
 
-        signature = ca_pkey.get_rsa().sign(hash, "sha256")
+        f = open(ACA_KEY, "r")
+        sk_string = f.read()
+        f.close()
 
-    return b64encode(signature)
+        sk = RSA.importKey(sk_string)
+
+        signature = sk.sign(blinded_hash, 1)[0]
+
+    return b64encode(str(signature))
 
 
 # Serves the certificate storage received from the CSs
@@ -164,10 +211,10 @@ def api_store_cert():
 # ToDo: CHANGE THIS FUNCTION
 @app.route('/reputation_exchange', methods=['GET'])
 def api_verify_reputation_exchange():
-    # Verifies the reputation exchange between a certified bitcoin address, and a new one.
+    # Verifies the reputation exchange between a.py certified bitcoin address, and a.py new one.
     # Because of in the first version of the PaySense the ACA generate the keys and the certificates, the verification
-    # can't be done exactly how it's supposed to be. According to the paper, the requester CS should perform a reputation
-    # transaction to a new bitcoin address and send that address to the ACA to be verified and certified. In this version
+    # can't be done exactly how it's supposed to be. According to the paper, the requester CS should perform a.py reputation
+    # transaction to a.py new bitcoin address and send that address to the ACA to be verified and certified. In this version
     # both addresses are already certified, but the ACA checks that the reputation of the new address comes only from the
     # first one, and also that the reputation of the previous address is also correct.
 
@@ -176,7 +223,7 @@ def api_verify_reputation_exchange():
     new_bc_addr = request.args.get('new_bc_address')
     history = history_testnet(new_bc_addr)
 
-    # The new address can only have a single transaction, corresponding to the reputation transaction from the old address
+    # The new address can only have a.py single transaction, corresponding to the reputation transaction from the old address
     if len(history) != 1:
         verified = False
     else:

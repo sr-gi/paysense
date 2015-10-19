@@ -1,11 +1,11 @@
-__author__ = "sdelgado"
-
 import threading
 
 from stem.control import Controller
 from flask import Flask, request
 from bitcoin import mktx, blockr_pushtx
 from bitcointransactions import insert_signature
+
+__author__ = "sdelgado"
 
 app = Flask(__name__)
 
@@ -18,6 +18,7 @@ signatures = []
 
 n_outputs = 0
 tx = None
+
 
 # ToDo: Delete this route, just for testing
 @app.route("/change_stage", methods=["GET"])
@@ -117,6 +118,7 @@ def reset_arrays():
     signatures = []
     n_outputs = 0
 
+
 def insert_signatures(tx):
     for data in signatures:
         signature = data[0]
@@ -138,7 +140,7 @@ def change_stage():
             print tx
             stage = "signatures"
         else:
-            # If a different number of groups of inputs that group of outputs is received, the process is restarted
+            # If a.py different number of groups of inputs that group of outputs is received, the process is restarted
             reset_arrays()
             stage = "outputs"
     elif stage == "signatures":
@@ -163,7 +165,7 @@ if __name__ == '__main__':
     with Controller.from_port() as controller:
         controller.authenticate("my_password")
 
-        # Create a hidden service where visitors of port 80 get redirected to local
+        # Create a.py hidden service where visitors of port 80 get redirected to local
         # port 5002
 
         print(" * Creating ephemeral hidden service")
@@ -171,7 +173,7 @@ if __name__ == '__main__':
         print(" * Our service is available at %s.onion, press ctrl+c to quit" % response.service_id)
 
         # ToDo: Remove this part, is just for testing
-        # Save .onion address in a file to be used by the client
+        # Save .onion address in a.py file to be used by the client
         f = open("onion_server.txt", 'w')
         f.write(response.service_id)
         f.close()

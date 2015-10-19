@@ -39,11 +39,66 @@ def count_splits(bc_address):
     return count(filter(lambda x: x['value'] == 1000, unspent))
 
 
+def rsa_test():
+
+    from Crypto.PublicKey import RSA
+    from random import randint
+
+    f = open("aca/private/paysense.key", "r")
+    sk_string = f.read()
+    f.close()
+    cert = X509.load_cert("aca/paysense.crt")
+
+    sk = RSA.importKey(sk_string)
+    pk = RSA.importKey(cert.get_pubkey().as_der())
+
+    m = long(3)
+    r = long(randint(1, 1000))
+
+    b_m = pk.blind(m, r)
+    signed_b_m = sk.sign(b_m, 1)[0]
+    md = sk.sign(m, 1)[0]
+
+    assert pk.unblind(signed_b_m, r) == md
+
+
+
+    #########################################
+    ################# TEST ##################
+    #########################################
+
+    # from Crypto.Util.number import bytes_to_long
+    # from Crypto.Signature import PKCS1_v1_5
+    # import SHA256
+    #
+    # assert pk.verify(cert_hash, [signature, 0])
+    #
+    # ca_pkey = EVP.load_key("../aca/private/paysense.key")
+    #
+    # sig_scheme = PKCS1_v1_5.new(sk)
+    # hash = SHA256.new(blinded_hash)
+    #
+    # signature_PKCS1_1 = sig_scheme.sign(hash)
+    # signature_PKCS1_2 = ca_pkey.get_rsa().sign(cert_hash, "sha256")
+    #
+    # assert signature_PKCS1_1 == signature_PKCS1_2
+    #
+    # print "TextBook signature: \t" + str(signature)
+    #
+    # print "PKCS1 signature: \t\t" + str(bytes_to_long(signature_PKCS1_2))
+
+
+    #########################################
+    #########################################
+
 def main():
     bc_address = "mjZJ8ovUXKv6D4GPM91Vq5sGW9AnhSo4dL"
     #rpc_test(bc_address)
     #print count_splits(bc_address)
-    split(bc_address)
+    #split(bc_address)
+    rsa_test()
+
+
 
 if __name__ == '__main__':
     main()

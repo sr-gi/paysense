@@ -25,8 +25,8 @@ def report_data(cs, data, index):
     t.start()
 
 
-def certification_test():
-    for i in range(1000):
+def certification_test(count=1000):
+    for i in range(count):
         cs = CS(get_data_directory(i))
         r = cs.registration()
         assert r == "OK"
@@ -50,3 +50,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    #certification_test(1)
