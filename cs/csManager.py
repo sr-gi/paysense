@@ -49,5 +49,5 @@ def main():
             t.start()
 
 if __name__ == '__main__':
-    main()
-    #certification_test(1)
+    #main()
+    certification_test(1)

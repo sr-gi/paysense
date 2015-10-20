@@ -8,13 +8,13 @@
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
 #
-#  You should have received a.py copy of the GNU General Public License
+#  You should have received a copy of the GNU General Public License
 #  along with this program; if not, write to the Free Software
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
 
 
-# This is a.py simple and fast ASN1 decoder without external libraries.
+# This is a simple and fast ASN1 decoder without external libraries.
 #
 # In order to browse through the ASN1 structure you need only 3
 # functions allowing you to navigate:

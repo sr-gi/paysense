@@ -140,7 +140,7 @@ def change_stage():
             print tx
             stage = "signatures"
         else:
-            # If a.py different number of groups of inputs that group of outputs is received, the process is restarted
+            # If a different number of groups of inputs that group of outputs is received, the process is restarted
             reset_arrays()
             stage = "outputs"
     elif stage == "signatures":
@@ -165,7 +165,7 @@ if __name__ == '__main__':
     with Controller.from_port() as controller:
         controller.authenticate("my_password")
 
-        # Create a.py hidden service where visitors of port 80 get redirected to local
+        # Create a hidden service where visitors of port 80 get redirected to local
         # port 5002
 
         print(" * Creating ephemeral hidden service")
@@ -173,7 +173,7 @@ if __name__ == '__main__':
         print(" * Our service is available at %s.onion, press ctrl+c to quit" % response.service_id)
 
         # ToDo: Remove this part, is just for testing
-        # Save .onion address in a.py file to be used by the client
+        # Save .onion address in a file to be used by the client
         f = open("onion_server.txt", 'w')
         f.write(response.service_id)
         f.close()
