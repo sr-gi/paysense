@@ -1,7 +1,7 @@
 import urllib2
 import ConfigParser
 from M2Crypto import X509, EC
-from flask import Flask, request
+from flask import Flask, request, json
 from base64 import b64decode
 from bitcointransactions import single_payment
 
@@ -11,24 +11,37 @@ S_KEY = 'private/paysense.key'
 CERT = 'paysense.crt'
 DEFAULT_AMOUNT = 1000
 
+# Configuration file data loading
+config = ConfigParser.ConfigParser()
+config.read("paysense.conf")
+
+BC_ADDRESS = config.get("BitcoinAddresses", "DCS", )
+ACA = config.get("Servers", "ACA", )
+
 
 # Gets the CS certificate from the ACA in pem format
 # @bitcoin_address is the bitcoin address that identifies the CS
 # @return CS certificate in pem format
 def get_cs_pem_data(bitcoin_address):
-    response = urllib2.urlopen('http://127.0.0.1:5001/get_cs_cert?bitcoin_address=' + bitcoin_address)
-    pem_data = b64decode(response.read())
+    try:
+        response = urllib2.urlopen(ACA + '/get_cs_cert?bitcoin_address=' + bitcoin_address)
+        response = b64decode(response.read())
+    except urllib2.URLError as e:
+        response = e
 
-    return pem_data
+    return response
 
 
 # Gets the ACA certificate in pem format
 # @return ACA certificate in pem format
 def get_ca_pem_data():
-    response = urllib2.urlopen('http://127.0.0.1:5001/get_ca_cert')
-    pem_data = b64decode(response.read())
+    try:
+        response = urllib2.urlopen(ACA + '/get_ca_cert')
+        response = b64decode(response.read())
+    except urllib2.URLError as e:
+        response = e
 
-    return pem_data
+    return response
 
 
 # Verifies the CS and the ACA signatures from a received sensing data
@@ -45,16 +58,20 @@ def verify_data(message, signature, bitcoin_address, cs_pem_data=None):
     # Get CA certificates from the ACA (pem data base64 encoded)
     ca_pem_data = get_ca_pem_data()
 
-    # Store received data in X509 structure
-    cs_certificate = X509.load_cert_string(cs_pem_data)
-    ca_certificate = X509.load_cert_string(ca_pem_data)
+    # If the data could not be obtained from the server
+    if type(ca_pem_data) is urllib2.URLError or type(cs_pem_data) is urllib2.URLError:
+        ca_verify = cs_verify = False
+    else:
+        # Store received data in X509 structure
+        cs_certificate = X509.load_cert_string(cs_pem_data)
+        ca_certificate = X509.load_cert_string(ca_pem_data)
 
-    # Get CS public key from received data
-    cs_public_key = EC.pub_key_from_der(cs_certificate.get_pubkey().as_der())
+        # Get CS public key from received data
+        cs_public_key = EC.pub_key_from_der(cs_certificate.get_pubkey().as_der())
 
-    # Verify CA signature in CS certificate and CS signature in data sent
-    ca_verify = cs_certificate.verify(ca_certificate.get_pubkey())
-    cs_verify = cs_public_key.verify_dsa_asn1(message, signature)
+        # Verify CA signature in CS certificate and CS signature in data sent
+        ca_verify = cs_certificate.verify(ca_certificate.get_pubkey())
+        cs_verify = cs_public_key.verify_dsa_asn1(message, signature)
 
     return {'ca': ca_verify, 'cs': cs_verify}
 
@@ -93,23 +110,15 @@ def api_receive_data():
                 pay_to_cs(bitcoin_address)
 
             else:
-                response = "Sensing data can't be verified"
+                response = json.dumps({'data': "Sensing data can't be verified\n"}), 500
         else:
-            response = "Some data is missing"
+            response = json.dumps({'data': "Some data is missing\n"}), 500
 
     else:
-        response = "Wrong data format"
+        response = json.dumps({'data': "Wrong data format\n"}), 500
 
     return response
 
 
 if __name__ == '__main__':
-    global BC_ADDRESS
-
-    # Get the current bitcoin address of the DCS
-    config = ConfigParser.ConfigParser()
-    config.read("paysense.conf")
-
-    BC_ADDRESS = config.get("BitcoinAddresses", "DCS", )
-
     app.run()

@@ -1,5 +1,6 @@
 import threading
 from cs import CS
+from urllib2 import URLError
 
 __author__ = 'sdelgado'
 
@@ -29,8 +30,8 @@ def certification_test(count=1000):
     for i in range(count):
         cs = CS(get_data_directory(i))
         r = cs.registration()
-        assert r == "OK"
-    print "END"
+        assert type(r) is not URLError and r.status_code is 200
+    print r.reason
 
 
 def main():
@@ -49,5 +50,5 @@ def main():
             t.start()
 
 if __name__ == '__main__':
-    #main()
-    certification_test(1)
+    main()
+    #certification_test(1)

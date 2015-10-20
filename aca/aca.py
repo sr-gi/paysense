@@ -23,11 +23,12 @@ ACA_CERT = 'paysense.crt'
 ACA_KEY = 'private/paysense.key'
 CS_CERTS_PATH = 'certs/'
 
-# Bitcoin address of the DCS (globally known)
+# Configuration file data loading
 config = ConfigParser.ConfigParser()
 config.read("paysense.conf")
 
 DCS_BC_ADDRESS = config.get("BitcoinAddresses", "DCS", )
+CERT_COUNT = int(config.get("Misc", "CertCount"))
 
 
 ############################
@@ -36,6 +37,7 @@ DCS_BC_ADDRESS = config.get("BitcoinAddresses", "DCS", )
 
 # Checks the correctness of the certificates provided by the CS
 def check_certificate_data(certs):
+    # ToDo: Decide witch fields of the certificate have to be checked and how
     return True
 
 
@@ -54,7 +56,6 @@ def check_blind_hashes(certs_der, rands):
 
     for i in range(len(certs_der)):
         if i is not r:
-            print r
             asn1_cert = decoder.decode(certs_der[i], asn1Spec=Certificate())[0]
             cert_hash = certificate_hashing(asn1_cert)
 
@@ -96,19 +97,6 @@ def check_payers(history, expected_payer=None):
 # @bitcoin_address is the name that will be used to store this certificate. This name matches with the bitcoin address
 # of the CS.
 def store_certificate(certificate, bitcoin_address):
-
-    # ca_pkey = EVP.load_key(ACA_KEY)
-    # cert = X509.load_cert_string(certificate)
-    #
-    #
-    # if cert.verify(ca_pkey):
-    #     f = open(CS_CERTS_PATH + bitcoin_address + '.pem', 'w')
-    #     f.write(certificate)
-    #     f.close()
-    #     response = "OK"
-    # else:
-    #     response = "Bad Certificate"
-
     # Load ACA cert and public key
     aca_cert = X509.load_cert(ACA_CERT)
     pk = RSA.importKey(aca_cert.get_pubkey().as_der())
@@ -119,14 +107,6 @@ def store_certificate(certificate, bitcoin_address):
     asn1_cert = decoder.decode(cert.as_der(), asn1Spec=Certificate())[0]
 
     cert_hash = certificate_hashing(asn1_cert)
-
-    # tbs = asn1_cert.getComponentByName("tbsCertificate")
-    #
-    # # Calculate the certificate hash
-    # tbs_der = encoder.encode(tbs)
-    # digest = sha256()
-    # digest.update(tbs_der)
-    # cert_hash = digest.digest()
 
     # Extract the certificate signature
     signature_bin = asn1_cert.getComponentByName("signatureValue")
@@ -142,7 +122,7 @@ def store_certificate(certificate, bitcoin_address):
         f = open(CS_CERTS_PATH + bitcoin_address + '.pem', 'w')
         f.write(certificate)
         f.close()
-        response = "OK"
+        response = "Certificate correctly stored"
     else:
         response = json.dumps({'data': "Bad certificate\n"}), 500
 
@@ -216,11 +196,12 @@ def api_sign_in():
         if step == 1:
             message = str(request.json.get("cert_hashes"))
 
+            # ToDo: The user must provide his identity with the cert_hases. Use that as a id to store the data instead of declaring the following variable as global
+            # ToDo: Use a true concurrent server?
             global blinded_hashes
             blinded_hashes = eval(b64decode(message))
-
             global r
-            r = randint(0, 99)
+            r = randint(0, CERT_COUNT - 1)
 
             response = b64encode(str(r))
         elif step == 2:
@@ -254,7 +235,7 @@ def api_store_cert():
 
         response = store_certificate(certificate, bitcoin_address)
     else:
-        response = "Bad request"
+        response = json.dumps({'data': "Bad request\n"}), 500
     return response
 
 

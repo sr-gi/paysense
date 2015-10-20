@@ -18,17 +18,25 @@ from shutil import rmtree
 
 __author__ = 'sdelgado'
 
+############################
+#     GLOBAL VARIABLES     #
+############################
+
+# Paths to local files
 P_KEY = 'paysense_public.key'
 S_KEY = 'private/paysense.key'
 CERT = 'paysense.crt'
 WIF = 'wif_qr.png'
 tmp = "_tmp/"
 
+# Configuration file data loading
 config = ConfigParser.ConfigParser()
 config.read("paysense.conf")
 
 DCS = config.get("Servers", "DCS", )
 ACA = config.get("Servers", "ACA", )
+RAND_SIZE = int(config.get("Misc", "RandomSize"))
+CERT_COUNT = int(config.get("Misc", "CertCount"))
 
 
 # Stores a certificate in a human readable format
@@ -135,79 +143,90 @@ class CS(object):
     def registration(self, filename='paysense'):
         certs, certs_der, cert_hashes, blinded_hashes, rands = [], [], [], [], []
 
-        # Get ACA information
-        aca_cert_text = b64decode(urllib2.urlopen(ACA + '/get_ca_cert').read())
-        aca_cert = X509.load_cert_string(aca_cert_text)
-        pk = pyRSA.importKey(aca_cert.get_pubkey().as_der())
+        try:
+            # Get ACA information
+            aca_cert_text = b64decode(urllib2.urlopen(ACA + '/get_ca_cert').read())
+            aca_cert = X509.load_cert_string(aca_cert_text)
+            pk = pyRSA.importKey(aca_cert.get_pubkey().as_der())
 
-        # Generate the basic certificates
-        for i in range(100):
-            cert, cert_hash = self.generate_certificate(aca_cert)
-            certs.append(cert)
-            cert_hashes.append(cert_hash)
+            # Generate the basic certificates
+            for i in range(CERT_COUNT):
+                cert, cert_hash = self.generate_certificate(aca_cert)
+                certs.append(cert)
+                cert_hashes.append(cert_hash)
 
-            # Blind the cert hash
-            rands.append(long(randint(1, 1000)))
-            blinded_hashes.append(pk.blind(cert_hashes[i], rands[i]))
+                # Blind the cert hash
+                rands.append(random.getrandbits(RAND_SIZE))
+                blinded_hashes.append(pk.blind(cert_hashes[i], rands[i]))
 
-        # Contact the ACA and send her the certificate hash to be signed
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        data = {'cert_hashes': b64encode(str(blinded_hashes)), 'step': 1}
+            # Contact the ACA and send her the certificate hash to be signed
+            headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+            data = {'cert_hashes': b64encode(str(blinded_hashes)), 'step': 1}
 
-        response = requests.post(ACA + "/sign_in", data=json.dumps(data), headers=headers)
-        p = int(b64decode(response.content))
+            response = requests.post(ACA + "/sign_in", data=json.dumps(data), headers=headers)
 
-        # Prepare the data to be sent to the ACA
-        for i in range(len(certs)):
-            if i != p:
-                certs_der.append(encoder.encode(certs[i]))
+            # If response is OK
+            if response.status_code is 200:
+                p = int(b64decode(response.content))
+
+                # Prepare the data to be sent to the ACA
+                for i in range(len(certs)):
+                    if i != p:
+                        certs_der.append(encoder.encode(certs[i]))
+                    else:
+                        # The data in the chosen position is deleted and not sent to the ACA
+                        certs_der.append(None)
+                        r = rands[i]
+                        print r
+                        rands[i] = 0
+
+                # Send the data to the ACA
+                data = {'certs': b64encode(str(certs_der)), 'rands': str(rands), 'step': 2}
+                response = requests.post(ACA + "/sign_in", data=json.dumps(data), headers=headers)
+
+                # If response is OK
+                if response.status_code is 200:
+                    signed_b_hash = b64decode(response.content)
+                    signature = pk.unblind(long(signed_b_hash), r)
+
+                    # Check that the signature is valid
+                    if pk.verify(cert_hashes[p], [signature, 0]):
+                        # Attach the signature to the certificate
+                        bin_signature = Signature("'%s'H" % ''.join("%02X" % ord(c) for c in long_to_bytes(signature)))
+                        certs[p].setComponentByName("signatureValue", bin_signature)
+
+                        # Set the bitcoin address to the chosen one
+                        self.bc_address = self.bc_address[p]
+
+                        # Rename and move the keys associated with the chosen bitcoin address
+                        os.rename(tmp + self.bc_address + "_key.pem", "paysense.key")
+                        os.rename(tmp + self.bc_address + "_public_key.pem", "paysense_public.key")
+
+                        # Delete the temp folder and all the other keys
+                        rmtree(tmp)
+
+                        # Store the certificate
+                        final_cert = X509.load_cert_der_string(encoder.encode(certs[p]))
+                        store_certificate(final_cert)
+
+                        # Get the certificate from the just created file with it's new format
+                        f = open(filename + '.crt')
+                        certificate = f.read()
+                        f.close()
+
+                        # Send the final certificate to the ACA
+                        data = {'certificate': certificate, 'bitcoin_address': self.bc_address}
+                        response = requests.post(ACA + "/store_certificate", data=json.dumps(data), headers=headers)
+
+                        return response
+                    else:
+                        return "Invalid certificate signature"
+                else:
+                    return response
             else:
-                # The data in the chosen position is deleted and not sent to the ACA
-                certs_der.append(None)
-                r = rands[i]
-                rands[i] = 0
-
-        # Send the data to the ACA
-        data = {'certs': b64encode(str(certs_der)), 'rands': str(rands), 'step': 2}
-        response = requests.post(ACA + "/sign_in", data=json.dumps(data), headers=headers)
-
-        # If response is OK
-        if response.status_code is 200:
-            signed_b_hash = b64decode(response.content)
-            signature = pk.unblind(long(signed_b_hash), r)
-
-            # Check that the signature is valid
-            if pk.verify(cert_hashes[p], [signature, 0]):
-                # Attach the signature to the certificate
-                bin_signature = Signature("'%s'H" % ''.join("%02X" % ord(c) for c in long_to_bytes(signature)))
-                certs[p].setComponentByName("signatureValue", bin_signature)
-
-                # Set the bitcoin address to the chosen one
-                self.bc_address = self.bc_address[p]
-
-                # Rename and move the keys associated with the chosen bitcoin address
-                os.rename(tmp + self.bc_address + "_key.pem", "paysense.key")
-                os.rename(tmp + self.bc_address + "_public_key.pem", "paysense_public.key")
-
-                # Delete the temp folder and all the other keys
-                rmtree(tmp)
-
-                # Store the certificate
-                final_cert = X509.load_cert_der_string(encoder.encode(certs[p]))
-                store_certificate(final_cert)
-
-                # Get the certificate from the just created file with it's new format
-                f = open(filename + '.crt')
-                certificate = f.read()
-                f.close()
-
-                # Send the final certificate to the ACA
-                data = {'certificate': certificate, 'bitcoin_address': self.bc_address}
-                r = requests.post(ACA + "/store_certificate", data=json.dumps(data), headers=headers)
-
-                return r.content
-            else:
-                return "Invalid certificate signature"
+                return response
+        except urllib2.URLError as e:
+            return e
 
     # Reports the data gathered by the CS
     def report_data(self, message, certificate=False):
