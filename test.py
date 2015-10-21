@@ -1,6 +1,7 @@
-from bitcointools import *
 from bitcoin import *
 from bitcoinrpc.authproxy import AuthServiceProxy
+
+from utils.bitcoin.tools import *
 
 __author__ = 'sdelgado'
 ACA = "http://127.0.0.1:5001"
@@ -16,13 +17,13 @@ def rpc_test(bc_address):
 
     CS0 = "mpzg9PJ1jNh5NfAU49gcB6zUKJBuMPwEqi"
 
-    #print rpc_connection.getaccount(bc_address)
+    #print rpc_connection.getaccount(btc_address)
     print rpc_connection.listtransactions("DCS", 500)
     #print rpc_connection.help()
     #print rpc_connection.listunspent(["mjZJ8ovUXKv6D4GPM91Vq5sGW9AnhSo4dL"], 0, 99)
 
 
-def split(bc_address):
+def split(btc_address):
 
     private_key_hex = get_priv_key_hex('dcs/private/paysense.key')
 
@@ -30,12 +31,12 @@ def split(bc_address):
 
     while 1:
         print time.strftime("%H:%M:%S")
-        print split_bitcoins(bc_address, private_key_hex, amount, 20, 'big', True)
+        print split_btc(btc_address, private_key_hex, amount, 20, 'big', True)
         time.sleep(1800)
 
 
-def count_splits(bc_address):
-    unspent = blockr_unspent(bc_address, 'testnet')
+def count_splits(btc_address):
+    unspent = blockr_unspent(btc_address, 'testnet')
     return count(filter(lambda x: x['value'] == 1000, unspent))
 
 
@@ -92,10 +93,10 @@ def rsa_test():
     #########################################
 
 def main():
-    bc_address = "mjZJ8ovUXKv6D4GPM91Vq5sGW9AnhSo4dL"
-    #rpc_test(bc_address)
-    #print count_splits(bc_address)
-    #split(bc_address)
+    btc_address = "mjZJ8ovUXKv6D4GPM91Vq5sGW9AnhSo4dL"
+    #rpc_test(btc_address)
+    #print count_splits(btc_address)
+    #split(btc_address)
     rsa_test()
 
 

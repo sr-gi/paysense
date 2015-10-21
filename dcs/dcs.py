@@ -1,9 +1,11 @@
 import urllib2
 import ConfigParser
+from base64 import b64decode
+
 from M2Crypto import X509, EC
 from flask import Flask, request, json
-from base64 import b64decode
-from bitcointransactions import single_payment
+
+from utils.bitcoin.transactions import reputation_transfer
 
 __author__ = 'sdelgado'
 
@@ -15,7 +17,7 @@ DEFAULT_AMOUNT = 1000
 config = ConfigParser.ConfigParser()
 config.read("paysense.conf")
 
-BC_ADDRESS = config.get("BitcoinAddresses", "DCS", )
+BTC_ADDRESS = config.get("BitcoinAddresses", "DCS", )
 ACA = config.get("Servers", "ACA", )
 
 
@@ -80,7 +82,7 @@ def pay_to_cs(bitcoin_address, amount=None):
     if amount is None:
         amount = DEFAULT_AMOUNT
 
-    single_payment(S_KEY, BC_ADDRESS, bitcoin_address, amount, fee=amount)
+    reputation_transfer(S_KEY, BTC_ADDRESS, bitcoin_address, amount, fee=amount)
 
 
 ############################

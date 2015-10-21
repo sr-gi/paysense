@@ -1,16 +1,17 @@
 from base64 import b64encode, b64decode
 from os import path
 import ConfigParser
+from random import randint
 
 from flask import Flask, request, jsonify, json
 from M2Crypto import X509
 from pyasn1_modules.rfc2459 import Certificate
 from pyasn1.codec.der import decoder
-from Crypto.PublicKey import RSA
-from random import randint
-from certificatetools import certificate_hashing
 
-from bitcointools import history_testnet
+from Crypto.PublicKey import RSA
+
+from utils.certificate.tools import certificate_hashing
+from utils.bitcoin.tools import history_testnet
 
 __author__ = 'sdelgado'
 
@@ -27,7 +28,7 @@ CS_CERTS_PATH = 'certs/'
 config = ConfigParser.ConfigParser()
 config.read("paysense.conf")
 
-DCS_BC_ADDRESS = config.get("BitcoinAddresses", "DCS", )
+DCS_BTC_ADDRESS = config.get("BitcoinAddresses", "DCS", )
 CERT_COUNT = int(config.get("Misc", "CertCount"))
 
 
@@ -81,7 +82,7 @@ def check_certificate(bitcoin_address):
 def check_payers(history, expected_payer=None):
     validation = True
     if expected_payer is None:
-        expected_payer = DCS_BC_ADDRESS
+        expected_payer = DCS_BTC_ADDRESS
     if len(history) == 0:
         validation = False
     for i in range(len(history)):
@@ -252,28 +253,28 @@ def api_verify_reputation_exchange():
 
     verified = True
 
-    new_bc_addr = request.args.get('new_bc_address')
-    history = history_testnet(new_bc_addr)
+    new_btc_addr = request.args.get('new_btc_address')
+    history = history_testnet(new_btc_addr)
 
     # The new address can only have a single transaction, corresponding to the reputation transaction from the old address
     if len(history) != 1:
         verified = False
     else:
         # If there's only one transaction, the list of 'from addresses' is extracted from the history and is verified that
-        # all the addresses in the list are the same one, that will match with the old_bc_address
+        # all the addresses in the list are the same one, that will match with the old_btc_address
         from_list = history[0].get('from')
-        old_bc_address = ''
+        old_btc_address = ''
         for address in from_list:
-            if old_bc_address == '':
-                old_bc_address = address
+            if old_btc_address == '':
+                old_btc_address = address
             else:
-                if old_bc_address != address:
+                if old_btc_address != address:
                     verified = False
 
         # If it's verified that there's only one from address in the history transaction of the new address, the correctness
         # of the transactions from the old_address is checked.
         if verified:
-            old_history = history_testnet(old_bc_address)
+            old_history = history_testnet(old_btc_address)
             # ToDo: Think how to verify the correctness of the transactions from the old bitcoin address. We could calculate the amount of bitcoins
             # ToDo: that came from the DCS, and check if it is lower than the reputation transferred, or directly check the reputation value stored in the DCS
             # ToDo: DB (actually not implemented) and check that the amount transferred is lower than that one.

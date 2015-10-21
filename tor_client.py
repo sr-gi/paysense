@@ -1,10 +1,11 @@
 import pycurl
 import json
 import StringIO
-import stem.process
 
+import stem.process
 from stem.util import term
-from bitcointransactions import get_tx_signature
+
+from utils.bitcoin.transactions import get_tx_signature
 
 __author__ = 'sdelgado'
 

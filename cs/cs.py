@@ -1,20 +1,21 @@
 import ConfigParser
 import urllib2
-
-from bitcointools import *
-from bitcointransactions import single_payment
-from flask import json
-from M2Crypto import EC, BIO, EVP, ASN1, RSA, X509
 from base64 import b64encode, b64decode
 from random import randint
 from hashlib import sha256
+from os import mkdir, path
+from shutil import rmtree
+
+from M2Crypto import EC, BIO, EVP, ASN1, RSA
 from pyasn1_modules.rfc2459 import Certificate
 from pyasn1_modules.rfc2314 import Signature
 from pyasn1.codec.der import encoder, decoder
 from Crypto.PublicKey import RSA as pyRSA
+
 from Crypto.Util.number import long_to_bytes
-from os import mkdir, path
-from shutil import rmtree
+
+from utils.bitcoin.tools import *
+from utils.bitcoin.transactions import reputation_transfer
 
 __author__ = 'sdelgado'
 
@@ -59,7 +60,7 @@ def store_certificate(certificate, filename='paysense'):
 class CS(object):
     def __init__(self, data_path):
         self.data_path = data_path
-        self.bc_address = []
+        self.btc_address = []
 
     # Generates the CS EC keys.
     def generate_keys(self):
@@ -75,8 +76,8 @@ class CS(object):
 
         # Generate the bitcoin address from the public key
         public_key_hex = get_pub_key_hex(ec.pub())
-        bitcoin_address = public_key_to_bc_address(public_key_hex, 'test')
-        self.bc_address.append(bitcoin_address)
+        bitcoin_address = public_key_to_btc_address(public_key_hex, 'test')
+        self.btc_address.append(bitcoin_address)
 
         # Save both keys
         if not path.exists(tmp):
@@ -88,7 +89,7 @@ class CS(object):
 
     def generate_certificate(self, aca_cert):
 
-        pkey, bc_address = self.generate_keys()
+        pkey, btc_address = self.generate_keys()
 
         issuer = aca_cert.get_issuer()
 
@@ -105,7 +106,7 @@ class CS(object):
         cert_name.L = 'Bellaterra'
         cert_name.O = 'UAB'
         cert_name.OU = 'DEIC'
-        cert_name.CN = bc_address
+        cert_name.CN = btc_address
         cert.set_subject_name(cert_name)
 
         # Set public_key
@@ -133,7 +134,7 @@ class CS(object):
 
         # Compute the sha256 of the TBS Certificate
         tbs_der = encoder.encode(tbs)
-        digest = sha256()
+        digest = hashlib.sha256()
         digest.update(tbs_der)
         cert_hash = digest.digest()
 
@@ -196,11 +197,11 @@ class CS(object):
                         certs[p].setComponentByName("signatureValue", bin_signature)
 
                         # Set the bitcoin address to the chosen one
-                        self.bc_address = self.bc_address[p]
+                        self.btc_address = self.btc_address[p]
 
                         # Rename and move the keys associated with the chosen bitcoin address
-                        os.rename(tmp + self.bc_address + "_key.pem", "paysense.key")
-                        os.rename(tmp + self.bc_address + "_public_key.pem", "paysense_public.key")
+                        os.rename(tmp + self.btc_address + "_key.pem", "paysense.key")
+                        os.rename(tmp + self.btc_address + "_public_key.pem", "paysense_public.key")
 
                         # Delete the temp folder and all the other keys
                         rmtree(tmp)
@@ -215,7 +216,7 @@ class CS(object):
                         f.close()
 
                         # Send the final certificate to the ACA
-                        data = {'certificate': certificate, 'bitcoin_address': self.bc_address}
+                        data = {'certificate': certificate, 'bitcoin_address': self.btc_address}
                         response = requests.post(ACA + "/store_certificate", data=json.dumps(data), headers=headers)
 
                         return response
@@ -231,7 +232,7 @@ class CS(object):
     # Reports the data gathered by the CS
     def report_data(self, message, certificate=False):
 
-        bitcoin_address = bc_address_from_cert(self.data_path + CERT)
+        bitcoin_address = btc_address_from_cert(self.data_path + CERT)
 
         # Load CS private key
         ec = EC.load_key(self.data_path + S_KEY)
@@ -253,20 +254,20 @@ class CS(object):
         return r.status_code, r.reason, r.content
 
     # This test emulates the CS reputation exchange when he doesn't trust any other CS nor the ACA
-    def self_reputation_exchange(self, new_bc_address, outside_bc_address=None):
+    def self_reputation_exchange(self, new_btc_address, outside_btc_address=None):
 
-        bitcoin_address = bc_address_from_cert(self.data_path + CERT)
+        bitcoin_address = btc_address_from_cert(self.data_path + CERT)
 
         address_balance = get_balance(bitcoin_address)
 
-        if outside_bc_address is not None:
+        if outside_btc_address is not None:
             # ToDo: Perform a proper way to withdraw reputation
             reputation_withdraw = (float(randint(2, 5)) / 100) * address_balance
-            single_payment(self.data_path + S_KEY, bitcoin_address, new_bc_address, address_balance, outside_bc_address,
+            reputation_transfer(self.data_path + S_KEY, bitcoin_address, new_btc_address, address_balance, outside_btc_address,
                            int(reputation_withdraw))
         else:
-            single_payment(self.data_path + S_KEY, bitcoin_address, new_bc_address, address_balance)
+            reputation_transfer(self.data_path + S_KEY, bitcoin_address, new_btc_address, address_balance)
 
-        response = urllib2.urlopen(ACA + '/reputation_exchange?new_bc_address=' + new_bc_address)
+        response = urllib2.urlopen(ACA + '/reputation_exchange?new_btc_address=' + new_btc_address)
 
         return response

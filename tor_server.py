@@ -3,7 +3,8 @@ import threading
 from stem.control import Controller
 from flask import Flask, request
 from bitcoin import mktx, blockr_pushtx
-from bitcointransactions import insert_signature
+
+from utils.bitcoin.transactions import insert_tx_signature
 
 __author__ = "sdelgado"
 
@@ -124,7 +125,7 @@ def insert_signatures(tx):
         signature = data[0]
         index = data[1]
         public_key = data[2]
-        tx = insert_signature(tx, index, signature, public_key)
+        tx = insert_tx_signature(tx, index, signature, public_key)
 
     return tx
 
