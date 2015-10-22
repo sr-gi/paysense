@@ -2,16 +2,14 @@ from base64 import b64encode, b64decode
 from os import path
 import ConfigParser
 from random import randint
-
 from flask import Flask, request, jsonify, json
 from M2Crypto import X509
 from pyasn1_modules.rfc2459 import Certificate
 from pyasn1.codec.der import decoder
-
 from Crypto.PublicKey import RSA
 
-from utils.certificate.tools import certificate_hashing
-from utils.bitcoin.tools import history_testnet
+from utils.certificate.tools import certificate_hashing, check_blind_hash
+from utils.bitcoin.transactions import history_testnet
 
 __author__ = 'sdelgado'
 
@@ -42,10 +40,12 @@ def check_certificate_data(certs):
     return True
 
 
-# Computes the blind hashes of the provided certificates and checks that they match with the provided blinded hashes
-# @certs_der are the provided certificates in der format
-# @rands are the provided blinding factors
-def check_blind_hashes(certs_der, rands):
+def check_hashes_validity(certs_der, rands):
+    """ Check if the provided blind hashes matches with the blinded hashes of the provided certificates.
+    :param certs_der: are the provided certificates in der format.
+    :param rands: re the provided blinding factors.
+    :return: True if all the hashes match. False otherwise.
+    """
     response = True
 
     # Load key
@@ -53,16 +53,14 @@ def check_blind_hashes(certs_der, rands):
     aca_cert_text = f.read()
     f.close()
     aca_cert = X509.load_cert_string(aca_cert_text)
-    pk = RSA.importKey(aca_cert.get_pubkey().as_der())
 
     for i in range(len(certs_der)):
         if i is not r:
-            asn1_cert = decoder.decode(certs_der[i], asn1Spec=Certificate())[0]
-            cert_hash = certificate_hashing(asn1_cert)
+            validity = check_blind_hash(certs_der[i], blinded_hashes[i], rands[i], aca_cert)
 
             # Check that the provided blind signatures match with the calculated ones
-            if pk.blind(cert_hash, rands[i]) != blinded_hashes[i]:
-                response = False
+            if not validity:
+                response = validity
                 break
     return response
 
@@ -105,9 +103,9 @@ def store_certificate(certificate, bitcoin_address):
     # Obtain the TBS certificate
     cert = X509.load_cert_string(certificate)
 
-    asn1_cert = decoder.decode(cert.as_der(), asn1Spec=Certificate())[0]
+    cert_hash = certificate_hashing(cert.as_der())
 
-    cert_hash = certificate_hashing(asn1_cert)
+    asn1_cert = decoder.decode(cert.as_der(), asn1Spec=Certificate())[0]
 
     # Extract the certificate signature
     signature_bin = asn1_cert.getComponentByName("signatureValue")
@@ -212,7 +210,7 @@ def api_sign_in():
             message = request.json.get("rands")
             rands = eval(message)
 
-            if check_certificate_data(certs_der) and check_blind_hashes(certs_der, rands):
+            if check_certificate_data(certs_der) and check_hashes_validity(certs_der, rands):
                 f = open(ACA_KEY, "r")
                 sk_string = f.read()
                 f.close()

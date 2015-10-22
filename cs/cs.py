@@ -1,20 +1,22 @@
-import ConfigParser
-import urllib2
-from base64 import b64encode, b64decode
-from random import randint
+from ConfigParser import ConfigParser
+from urllib2 import urlopen, URLError
 from hashlib import sha256
+from os import rename
+from time import time
+from json import dumps
+from base64 import b64encode, b64decode
+from random import randint,getrandbits
+from requests import post
 from os import mkdir, path
 from shutil import rmtree
-
-from M2Crypto import EC, BIO, EVP, ASN1, RSA
+from M2Crypto import EC, BIO, EVP, ASN1, RSA, X509
 from pyasn1_modules.rfc2459 import Certificate
 from pyasn1_modules.rfc2314 import Signature
 from pyasn1.codec.der import encoder, decoder
-from Crypto.PublicKey import RSA as pyRSA
-
+from Crypto.PublicKey import RSA as tbRSA
 from Crypto.Util.number import long_to_bytes
 
-from utils.bitcoin.tools import *
+from utils.bitcoin.tools import get_pub_key_hex, public_key_to_btc_address, btc_address_from_cert, get_balance
 from utils.bitcoin.transactions import reputation_transfer
 
 __author__ = 'sdelgado'
@@ -31,7 +33,7 @@ WIF = 'wif_qr.png'
 tmp = "_tmp/"
 
 # Configuration file data loading
-config = ConfigParser.ConfigParser()
+config = ConfigParser()
 config.read("paysense.conf")
 
 DCS = config.get("Servers", "DCS", )
@@ -114,10 +116,10 @@ class CS(object):
 
         # Time for certificate to stay valid
         cur_time = ASN1.ASN1_UTCTIME()
-        cur_time.set_time(int(time.time()))
+        cur_time.set_time(int(time()))
         # Expire certs in 1 year.
         expire_time = ASN1.ASN1_UTCTIME()
-        expire_time.set_time(int(time.time()) + 60 * 60 * 24 * 365)
+        expire_time.set_time(int(time()) + 60 * 60 * 24 * 365)
         # Set the validity
         cert.set_not_before(cur_time)
         cert.set_not_after(expire_time)
@@ -134,7 +136,7 @@ class CS(object):
 
         # Compute the sha256 of the TBS Certificate
         tbs_der = encoder.encode(tbs)
-        digest = hashlib.sha256()
+        digest = sha256()
         digest.update(tbs_der)
         cert_hash = digest.digest()
 
@@ -146,9 +148,9 @@ class CS(object):
 
         try:
             # Get ACA information
-            aca_cert_text = b64decode(urllib2.urlopen(ACA + '/get_ca_cert').read())
+            aca_cert_text = b64decode(urlopen(ACA + '/get_ca_cert').read())
             aca_cert = X509.load_cert_string(aca_cert_text)
-            pk = pyRSA.importKey(aca_cert.get_pubkey().as_der())
+            pk = tbRSA.importKey(aca_cert.get_pubkey().as_der())
 
             # Generate the basic certificates
             for i in range(CERT_COUNT):
@@ -157,14 +159,14 @@ class CS(object):
                 cert_hashes.append(cert_hash)
 
                 # Blind the cert hash
-                rands.append(random.getrandbits(RAND_SIZE))
+                rands.append(getrandbits(RAND_SIZE))
                 blinded_hashes.append(pk.blind(cert_hashes[i], rands[i]))
 
             # Contact the ACA and send her the certificate hash to be signed
             headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
             data = {'cert_hashes': b64encode(str(blinded_hashes)), 'step': 1}
 
-            response = requests.post(ACA + "/sign_in", data=json.dumps(data), headers=headers)
+            response = post(ACA + "/sign_in", data=dumps(data), headers=headers)
 
             # If response is OK
             if response.status_code is 200:
@@ -178,12 +180,11 @@ class CS(object):
                         # The data in the chosen position is deleted and not sent to the ACA
                         certs_der.append(None)
                         r = rands[i]
-                        print r
                         rands[i] = 0
 
                 # Send the data to the ACA
                 data = {'certs': b64encode(str(certs_der)), 'rands': str(rands), 'step': 2}
-                response = requests.post(ACA + "/sign_in", data=json.dumps(data), headers=headers)
+                response = post(ACA + "/sign_in", data=dumps(data), headers=headers)
 
                 # If response is OK
                 if response.status_code is 200:
@@ -200,8 +201,8 @@ class CS(object):
                         self.btc_address = self.btc_address[p]
 
                         # Rename and move the keys associated with the chosen bitcoin address
-                        os.rename(tmp + self.btc_address + "_key.pem", "paysense.key")
-                        os.rename(tmp + self.btc_address + "_public_key.pem", "paysense_public.key")
+                        rename(tmp + self.btc_address + "_key.pem", "paysense.key")
+                        rename(tmp + self.btc_address + "_public_key.pem", "paysense_public.key")
 
                         # Delete the temp folder and all the other keys
                         rmtree(tmp)
@@ -217,7 +218,7 @@ class CS(object):
 
                         # Send the final certificate to the ACA
                         data = {'certificate': certificate, 'bitcoin_address': self.btc_address}
-                        response = requests.post(ACA + "/store_certificate", data=json.dumps(data), headers=headers)
+                        response = post(ACA + "/store_certificate", data=dumps(data), headers=headers)
 
                         return response
                     else:
@@ -226,7 +227,7 @@ class CS(object):
                     return response
             else:
                 return response
-        except urllib2.URLError as e:
+        except URLError as e:
             return e
 
     # Reports the data gathered by the CS
@@ -249,7 +250,7 @@ class CS(object):
             f.close()
             data['cs_pem_data'] = cs_pem_data
 
-        r = requests.post(DCS, data=json.dumps(data), headers=headers)
+        r = post(DCS, data=dumps(data), headers=headers)
 
         return r.status_code, r.reason, r.content
 
@@ -263,11 +264,10 @@ class CS(object):
         if outside_btc_address is not None:
             # ToDo: Perform a proper way to withdraw reputation
             reputation_withdraw = (float(randint(2, 5)) / 100) * address_balance
-            reputation_transfer(self.data_path + S_KEY, bitcoin_address, new_btc_address, address_balance, outside_btc_address,
-                           int(reputation_withdraw))
+            reputation_transfer(self.data_path + S_KEY, bitcoin_address, new_btc_address, address_balance, outside_btc_address, int(reputation_withdraw))
         else:
             reputation_transfer(self.data_path + S_KEY, bitcoin_address, new_btc_address, address_balance)
 
-        response = urllib2.urlopen(ACA + '/reputation_exchange?new_btc_address=' + new_btc_address)
+        response = urlopen(ACA + '/reputation_exchange?new_btc_address=' + new_btc_address)
 
         return response

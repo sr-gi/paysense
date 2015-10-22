@@ -1,7 +1,6 @@
 import urllib2
 import ConfigParser
 from base64 import b64decode
-
 from M2Crypto import X509, EC
 from flask import Flask, request, json
 
