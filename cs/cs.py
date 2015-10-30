@@ -17,7 +17,8 @@ from Crypto.PublicKey import RSA as tbRSA
 from Crypto.Util.number import long_to_bytes
 
 from utils.bitcoin.tools import get_pub_key_hex, public_key_to_btc_address, btc_address_from_cert, get_balance
-from utils.bitcoin.transactions import reputation_transfer
+from utils.bitcoin.transactions import reputation_transfer, blockr_unspent
+from utils.certificate.tools import store_certificate
 
 __author__ = 'sdelgado'
 
@@ -40,23 +41,6 @@ DCS = config.get("Servers", "DCS", )
 ACA = config.get("Servers", "ACA", )
 RAND_SIZE = int(config.get("Misc", "RandomSize"))
 CERT_COUNT = int(config.get("Misc", "CertCount"))
-
-
-# Stores a certificate in a human readable format
-# @certificate is the certificate object with all the necessary information
-def store_certificate(certificate, filename='paysense'):
-        # Save the pem data into the pem file
-        certificate.save_pem(filename + '.crt')
-
-        # In order to write the human readable certificate before the encoded data we should load the data just stored
-        # and append at the end of the file.
-        f = open(filename + '.crt', 'r')
-        data = f.read()
-        f.close()
-        f = open(filename + '.crt', 'w')
-        f.write(certificate.as_text())
-        f.write(data)
-        f.close()
 
 
 class CS(object):
@@ -209,7 +193,7 @@ class CS(object):
 
                         # Store the certificate
                         final_cert = X509.load_cert_der_string(encoder.encode(certs[p]))
-                        store_certificate(final_cert)
+                        store_certificate(final_cert.as_der())
 
                         # Get the certificate from the just created file with it's new format
                         f = open(filename + '.crt')
@@ -271,3 +255,25 @@ class CS(object):
         response = urlopen(ACA + '/reputation_exchange?new_btc_address=' + new_btc_address)
 
         return response
+
+    def coinjoin_reputation_exchange(self):
+        # Get the current bitcoin address
+        bitcoin_address = btc_address_from_cert(self.data_path + CERT)
+
+        # Get the address current balance
+        address_balance = get_balance(bitcoin_address)
+
+        # Perform a transaction to an new (intermediate) bitcoin address in order to transform all the bitcoin junks in a single one with the total value.
+        int_btc_addr_pk, int_btc_addr = self.generate_keys()
+        transaction_hash, used_tx = reputation_transfer(self.data_path + S_KEY, bitcoin_address, int_btc_addr, address_balance)
+
+        # Create the address that will be used as a new pseudonym
+        new_btc_addr_pk, new_btc_addr = self.generate_keys()
+
+        # Build the output of the mixing transaction
+        mixing_output = [{'value': address_balance, 'address': new_btc_addr}]
+
+        # Build the input of the mixing transaction
+        mixing_input = [{'output': transaction_hash + ':0', 'value': address_balance}]
+
+

@@ -3,7 +3,7 @@ from os import path
 import ConfigParser
 from random import randint
 from flask import Flask, request, jsonify, json
-from M2Crypto import X509
+from M2Crypto import X509, urllib2
 from pyasn1_modules.rfc2459 import Certificate
 from pyasn1.codec.der import decoder
 from Crypto.PublicKey import RSA
@@ -92,7 +92,7 @@ def check_payers(history, expected_payer=None):
 
 
 # Stores a certificate in the certificates path
-# @certificate is a String representation of the certificate
+# @certificate is a str representation of the certificate
 # @bitcoin_address is the name that will be used to store this certificate. This name matches with the bitcoin address
 # of the CS.
 def store_certificate(certificate, bitcoin_address):
@@ -183,6 +183,12 @@ def api_get_cs_pem():
 def api_get_ca_pem():
     certificate = get_ca_certificate()
     return b64encode(certificate)
+
+
+@app.route('/get_tor_address', methods=['GET'])
+def get_tor_address():
+    response = urllib2.urlopen("http://127.0.0.1:5002" + '/get_address')
+    return response.read()
 
 
 # Serves the registration requests from the CS

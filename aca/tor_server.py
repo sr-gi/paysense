@@ -1,8 +1,9 @@
 import threading
 
 from stem.control import Controller
-from flask import Flask, request
+from flask import Flask, request, json
 from bitcoin import mktx, blockr_pushtx
+from time import time
 
 from utils.bitcoin.transactions import insert_tx_signature
 
@@ -11,28 +12,23 @@ __author__ = "sdelgado"
 app = Flask(__name__)
 
 stage = "outputs"
+server_address = None
 stage_time = 45.0
+last_update = 0
 
 outputs = []
 inputs = []
 signatures = []
 
-n_outputs = 0
 tx = None
 
+TOR_KEY = "../../aca/private/tor.key"
+PASSWORD = "my_password"
 
-# ToDo: Delete this route, just for testing
-@app.route("/change_stage", methods=["GET"])
-def change_state():
-    global stage
-    new_stage = request.args.get("stage")
 
-    if new_stage in {"outputs", "inputs", "signatures"}:
-        stage = new_stage
-        message = "Stage changed to " + new_stage
-    else:
-        message = "Wrong stage"
-    return message
+@app.route('/get_address', methods=['GET'])
+def get_address():
+    return server_address
 
 
 @app.route("/", methods=["GET"])
@@ -42,43 +38,42 @@ def index():
 
 @app.route("/outputs", methods=["POST", "GET"])
 def post_outputs():
-    global n_outputs
+    global last_update
     if stage == "outputs":
-        if request.method == "GET":
-            message = "Stage open"
-        elif request.method == "POST" and request.headers["Content-Type"] == "application/json":
+        if request.method == "POST" and request.headers["Content-Type"] == "application/json":
             tx_outputs = request.json.get("outputs")
-            for tx_output in tx_outputs:
-                outputs.append(tx_output)
-
-            message = "OK"
-            n_outputs += 1
+            if len(tx_outputs) > 1:
+                message = json.dumps({'data': "Wrong Output. Outputs must have only one source entry.\n"}), 500
+            else:
+                outputs.append(tx_outputs[0])
+                # Calculate the next update time
+                message = str(abs(stage_time - (t - last_update)))
             print outputs
         else:
-            message = "Wrong request"
+            message = json.dumps({'data': "Wrong request\n"}), 500
     else:
-        message = "Stage closed"
+        message = json.dumps({'data': "Stage closed\n"}), 500
 
     return message
 
 
 @app.route("/inputs", methods=["POST", "GET"])
 def post_inputs():
+    global last_update
     if stage == "inputs":
-        if request.method == "GET":
-            message = "Stage open"
-        elif request.method == "POST" and request.headers["Content-Type"] == "application/json":
+        if request.method == "POST" and request.headers["Content-Type"] == "application/json":
             tx_inputs = request.json.get("inputs")
             if len(tx_inputs) > 1:
-                message = "Wrong Input. Inputs must have only one source entry"
+                message = json.dumps({'data': "Wrong Input. Inputs must have only one source entry.\n"}), 500
             else:
                 inputs.append(tx_inputs[0])
-                message = "OK"
+                # Calculate the next update time
+                message = str(abs(stage_time - (time() - last_update)))
                 print inputs
         else:
-            message = "Wrong request"
+            message = json.dumps({'data': "Wrong request.\n"}), 500
     else:
-        message = "Stage closed"
+        message = json.dumps({'data': "Stage closed.\n"}), 500
 
     return message
 
@@ -106,18 +101,17 @@ def get_signatures():
 
 
 def reset_arrays():
-    global outputs, inputs, signatures, n_outputs
+    global outputs, inputs, signatures
 
-    print "Reseting arrays. Current stage :" + stage
+    print "Resetting arrays. Current stage :" + stage
     print "Arrays status: "
-    print "outputs : " + str(outputs) + " with len (n_outputs) : " + str(n_outputs)
+    print "outputs : " + str(outputs) + " with len : " + str(len(outputs))
     print "inputs : " + str(inputs) + " with len : " + str(len(inputs))
     print "signatures : " + str(signatures) + " with len : " + str(len(signatures))
 
     outputs = []
     inputs = []
     signatures = []
-    n_outputs = 0
 
 
 def insert_signatures(tx):
@@ -131,12 +125,12 @@ def insert_signatures(tx):
 
 
 def change_stage():
-    global stage, tx, n_outputs, inputs, outputs
+    global stage, tx, inputs, outputs, last_update
 
-    if stage == "outputs" and n_outputs > 0:
+    if stage == "outputs" and len(outputs) > 0:
         stage = "inputs"
     elif stage == "inputs":
-        if n_outputs == len(inputs) and n_outputs != 0:
+        if len(outputs) == len(inputs):
             tx = mktx(inputs, outputs)
             print tx
             stage = "signatures"
@@ -145,7 +139,7 @@ def change_stage():
             reset_arrays()
             stage = "outputs"
     elif stage == "signatures":
-        if n_outputs == len(inputs) == len(signatures) and n_outputs != 0:
+        if len(outputs) == len(inputs) == len(signatures):
             tx = insert_signatures(tx)
             print "Final tx: " + tx
             result = blockr_pushtx(tx, 'testnet')
@@ -154,6 +148,7 @@ def change_stage():
         reset_arrays()
         stage = "outputs"
 
+    last_update = time()
     t = threading.Timer(stage_time, change_stage)
     t.start()
     print " * Current stage: " + stage
@@ -164,23 +159,18 @@ if __name__ == '__main__':
     print(" * Connecting to tor")
 
     with Controller.from_port() as controller:
-        controller.authenticate("my_password")
+        controller.authenticate(PASSWORD)
 
         # Create a hidden service where visitors of port 80 get redirected to local
         # port 5002
 
         print(" * Creating ephemeral hidden service")
         response = controller.create_ephemeral_hidden_service({80: 5002}, await_publication=True)
-        print(" * Our service is available at %s.onion, press ctrl+c to quit" % response.service_id)
-
-        # ToDo: Remove this part, is just for testing
-        # Save .onion address in a file to be used by the client
-        f = open("onion_server.txt", 'w')
-        f.write(response.service_id)
-        f.close()
-        #########################################################
+        server_address = response.service_id + ".onion"
+        print(" * Our service is available at %s, press ctrl+c to quit" % server_address)
 
         try:
+            last_update = time()
             t = threading.Timer(stage_time, change_stage)
             t.start()
 
