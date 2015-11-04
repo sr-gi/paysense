@@ -1,20 +1,25 @@
 import pycurl
+from stem.control import Controller
 import stem.process
 from stem.util import term
 from StringIO import StringIO
 
 __author__ = 'sdelgado'
 
-SOCKS_PORT = 7000
+SOCKS_PORT = 9050
+CONTROL_PORT = 9051
 
 
-def tor_query(url, method='GET', data=None, headers=None):
+def tor_query(url, method='GET', data=None, headers=None, socks_port=None):
     output = StringIO()
+
+    if socks_port is None:
+        socks_port = SOCKS_PORT
 
     query = pycurl.Curl()
     query.setopt(pycurl.URL, url)
     query.setopt(pycurl.PROXY, 'localhost')
-    query.setopt(pycurl.PROXYPORT, SOCKS_PORT)
+    query.setopt(pycurl.PROXYPORT, socks_port)
     query.setopt(pycurl.PROXYTYPE, pycurl.PROXYTYPE_SOCKS5_HOSTNAME)
     query.setopt(pycurl.WRITEFUNCTION, output.write)
 
@@ -40,12 +45,21 @@ def print_bootstrap_lines(line):
         print(term.format(line, term.Color.BLUE))
 
 
-def init_tor():
+def init_tor(socks_port=None, control_port=None):
+    if socks_port is None:
+        socks_port = SOCKS_PORT
+    if control_port is None:
+        control_port = CONTROL_PORT
+
     process = stem.process.launch_tor_with_config(
         config={
-            'SocksPort': str(SOCKS_PORT),
+            'SocksPort': str(socks_port),
+            'ControlPort': str(control_port)
         },
-        init_msg_handler=print_bootstrap_lines, timeout=60, take_ownership=False)
+        init_msg_handler=print_bootstrap_lines, timeout=60, take_ownership=True)
 
-    return process
+    controller = Controller.from_port()
+    controller.authenticate()
+
+    return process, controller
 

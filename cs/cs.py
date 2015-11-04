@@ -2,8 +2,8 @@ from ConfigParser import ConfigParser
 from urllib2 import urlopen, URLError
 from hashlib import sha256
 from os import rename
-from time import time
-from json import dumps
+from time import time, sleep
+from json import dumps, loads
 from base64 import b64encode, b64decode
 from random import randint, getrandbits
 from requests import post
@@ -15,10 +15,12 @@ from pyasn1_modules.rfc2314 import Signature
 from pyasn1.codec.der import encoder, decoder
 from Crypto.PublicKey import RSA as tbRSA
 from Crypto.Util.number import long_to_bytes
+from stem.control import Controller
 
 from utils.bitcoin.tools import get_pub_key_hex, public_key_to_btc_address, btc_address_from_cert, get_balance, private_key_to_wif, get_priv_key_hex
-from utils.bitcoin.transactions import reputation_transfer, blockr_unspent
+from utils.bitcoin.transactions import reputation_transfer, blockr_unspent, get_tx_signature
 from utils.certificate.tools import store_certificate
+from utils.tor.tools import tor_query, init_tor
 
 __author__ = 'sdelgado'
 
@@ -41,6 +43,56 @@ DCS = config.get("Servers", "DCS", )
 ACA = config.get("Servers", "ACA", )
 RAND_SIZE = int(config.get("Misc", "RandomSize"))
 CERT_COUNT = int(config.get("Misc", "CertCount"))
+
+
+def get_mixing_utxo(data_path, amount, fee):
+    # Get the current bitcoin address
+    bitcoin_address = btc_address_from_cert(data_path + CERT)
+
+    # Get the address current balance
+    address_balance = get_balance(bitcoin_address)
+
+    # Get the address utxo set
+    utxo_set = blockr_unspent(bitcoin_address, 'testnet')
+
+    if len(utxo_set) is 1 and address_balance == amount + fee:
+        # Case 0
+        # The address has already only one utxo with the desired value, that one could be used as input for the reputation transfer protocol.
+        transaction_hash = utxo_set[0].get("output")
+
+    elif len(utxo_set) > 1:
+        # Case 1
+        if address_balance is amount + 2 * fee:
+            # Perform a transaction to oneself in order to transform all the bitcoin utxo in a single one with the total value.
+            # Fees will be payed twice here since two transaction have to be performed
+            transaction_hash, used_tx = reputation_transfer(data_path + S_KEY, bitcoin_address, bitcoin_address, address_balance)
+            # Add the output index. Since the transaction has always only one output, it will be always 0.
+            transaction_hash += ":0"
+        elif address_balance > amount + 2 * fee:
+            # Case 2-3
+            # If there's a lot of utxos we should look for one that has the amount we are looking for.
+            utxo_n = None
+            for utxo in utxo_set:
+                if utxo("value") == amount + fee:
+                    utxo_n = utxo
+                    break
+
+            # If we find that transaction, it could be used as input of the reputation transfer protocol.
+            if utxo_n is not None:
+                # Case 2
+                transaction_hash = utxo_n.get("output")
+            # Otherwise, a transaction with the desired amount to oneself should be performed in order to use that output as input of the next transaction.
+            # Fees will be payed twice here since two transaction have to be performed.
+            else:
+                # Case 3
+                transaction_hash, used_tx = reputation_transfer(data_path + S_KEY, bitcoin_address, bitcoin_address, amount + fee)
+                transaction_hash += ":0"
+        else:
+            transaction_hash = None
+    else:
+        transaction_hash = None
+
+    return transaction_hash
 
 
 class CS(object):
@@ -272,64 +324,77 @@ class CS(object):
 
     def coinjoin_reputation_exchange(self, amount, fee=1000):
 
-        # Get the current bitcoin address
-        bitcoin_address = btc_address_from_cert(self.data_path + CERT)
+        # Get onion server address and the mixing amount from the ACA
+        data = loads(urlopen("http://158.109.79.170:5001" + '/get_tor_address').read())
+        tor_server = data.get("address")
+        mixing_amount = data.get("amount")
 
-        # Get the address current balance
-        address_balance = get_balance(bitcoin_address)
+        if mixing_amount == amount:
 
-        # Get the address utxo set
-        utxo_set = blockr_unspent(bitcoin_address, 'testnet')
+            transaction_hash = get_mixing_utxo(self.data_path, amount, fee)
 
-        if len(utxo_set) is 1 and address_balance == amount + fee:
-            # Case 0
-            # The address has already only one utxo with the desired value, that one could be used as input for the reputation transfer protocol.
-            transaction_hash = utxo_set[0].get("output")
+            if transaction_hash is not None:
 
-        elif len(utxo_set) > 1:
-            # Case 1
-            if address_balance is amount + 2 * fee:
-                # Perform a transaction to oneself in order to transform all the bitcoin utxo in a single one with the total value.
-                # Fees will be payed twice here since two transaction have to be performed
-                transaction_hash, used_tx = reputation_transfer(self.data_path + S_KEY, bitcoin_address, bitcoin_address, address_balance)
-                # Add the output index. Since the transaction has always only one output, it will be always 0.
-                transaction_hash += ":0"
-            elif address_balance > amount + 2 * fee:
-                # Case 2-3
-                # If there's a lot of utxos we should look for one that has the amount we are looking for.
-                utxo_n = None
-                for utxo in utxo_set:
-                    if utxo("value") == amount + fee:
-                        utxo_n = utxo
-                        break
+                # Create the address that will be used as a new pseudonym
+                new_btc_addr_pk, new_btc_addr = self.generate_keys()
 
-                # If we find that transaction, it could be used as input of the reputation transfer protocol.
-                if utxo_n is not None:
-                    # Case 2
-                    transaction_hash = utxo_n.get("output")
-                # Otherwise, a transaction with the desired amount to oneself should be performed in order to use that output as input of the next transaction.
-                # Fees will be payed twice here since two transaction have to be performed.
+                # Build the output of the mixing transaction
+                mixing_output = [{'value': amount, 'address': new_btc_addr}]
+
+                # Build the input of the mixing transaction
+                mixing_input = [{'output': transaction_hash, 'value': amount + fee}]
+
+                print "Connecting to " + tor_server
+                # ToDo: Uncomment, actually running tor from terminal since testing server and client from the same machine
+                # print(term.format("Starting Tor:\n", term.Attr.BOLD))
+                # tor_process, controller = init_tor()
+
+                # ToDo: Delete the following two lines when the above one is uncommented
+                controller = Controller.from_port()
+                controller.authenticate()
+
+                headers = ['Content-type: application/json', 'Accept: text/plain']
+                # Send reputation exchange output
+                data = dumps({'outputs': mixing_output})
+                code, response = tor_query(tor_server + "/outputs", 'POST', data, headers)
+
+                if code is 200:
+                    print "Output correctly sent. Resetting tor connection"
+                    controller.new_circuit()
+
+                    print "Waiting " + response + " for sending the input"
+                    sleep(float(response))
+
+                    # Send reputation exchange input
+                    data = dumps({'inputs': mixing_input})
+                    code, response = tor_query(tor_server + "/inputs", 'POST', data, headers)
+
+                    if code is 200:
+                        print "Input correctly sent. Resetting tor connection"
+                        controller.new_circuit()
+
+                        print "Waiting " + response + " for getting the tx to be signed"
+                        sleep(float(response))
+
+                        # Get tx hash to sign it
+                        code, tx = tor_query(tor_server + '/signatures')
+
+                        private_key_hex = get_priv_key_hex(self.data_path + S_KEY)
+                        bitcoin_address = btc_address_from_cert(self.data_path + CERT)
+                        public_key = EC.load_pub_key(self.data_path + P_KEY)
+                        public_key_hex = get_pub_key_hex(public_key.pub())
+
+                        signature, index = get_tx_signature(tx, private_key_hex, bitcoin_address)
+
+                        data = {'signature': signature, 'index': index, 'public_key': public_key_hex}
+                        data = dumps({'data': data})
+
+                        code, response = tor_query(tor_server + "/signatures", 'POST', data, headers)
+                    else:
+                        print response
                 else:
-                    # Case 3
-                    transaction_hash, used_tx = reputation_transfer(self.data_path + S_KEY, bitcoin_address, bitcoin_address, amount + fee)
-                    transaction_hash += ":0"
+                    print response
             else:
-                transaction_hash = None
+                return "You have not enough reputation to perform a reputation exchange. Minimum amount: " + str(amount) + " + " + str(fee) + " (transaction fee)."
         else:
-            transaction_hash = None
-
-        if transaction_hash is not None:
-
-            # Create the address that will be used as a new pseudonym
-            new_btc_addr_pk, new_btc_addr = self.generate_keys()
-
-            # Build the output of the mixing transaction
-            mixing_output = [{'value': amount, 'address': new_btc_addr}]
-
-            # Build the input of the mixing transaction
-            mixing_input = [{'output': transaction_hash, 'value': amount + fee}]
-
-
-
-        else:
-            return "You have not enough reputation to perform a reputation exchange. Minimum amount: " + str(amount) + " + " + str(fee) + " (transaction fee)."
+            return "The mixing server does not provide a mixing process for the chosen reputation amount"

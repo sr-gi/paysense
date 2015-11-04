@@ -288,4 +288,4 @@ def api_verify_reputation_exchange():
 
 
 if __name__ == '__main__':
-    app.run(port=5001)
+    app.run(host='158.109.79.170', port=5001)

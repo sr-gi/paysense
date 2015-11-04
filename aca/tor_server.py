@@ -1,6 +1,8 @@
 import threading
+import stem.process
 
 from stem.control import Controller
+from utils.tor.tools import init_tor
 from flask import Flask, request, json
 from bitcoin import mktx, blockr_pushtx
 from time import time
@@ -8,11 +10,12 @@ from time import time
 from utils.bitcoin.transactions import insert_tx_signature
 
 __author__ = "sdelgado"
-
 app = Flask(__name__)
 
 stage = "outputs"
+mixing_amount = 10000
 server_address = None
+
 stage_time = 45.0
 last_update = 0
 
@@ -23,17 +26,17 @@ signatures = []
 tx = None
 
 TOR_KEY = "../../aca/private/tor.key"
-PASSWORD = "my_password"
-
-
-@app.route('/get_address', methods=['GET'])
-def get_address():
-    return server_address
 
 
 @app.route("/", methods=["GET"])
 def index():
     return "The current stage is " + stage
+
+
+@app.route('/get_address', methods=['GET'])
+def get_address():
+    data = {"address": server_address, "amount": mixing_amount}
+    return json.dumps(data)
 
 
 @app.route("/outputs", methods=["POST", "GET"])
@@ -42,7 +45,7 @@ def post_outputs():
     if stage == "outputs":
         if request.method == "POST" and request.headers["Content-Type"] == "application/json":
             tx_outputs = request.json.get("outputs")
-            print request
+            print request.remote_addr
             if len(tx_outputs) > 1:
                 message = json.dumps({'data': "Wrong Output. Outputs must have only one source entry.\n"}), 500
             else:
@@ -64,7 +67,7 @@ def post_inputs():
     if stage == "inputs":
         if request.method == "POST" and request.headers["Content-Type"] == "application/json":
             tx_inputs = request.json.get("inputs")
-            print request
+            print request.remote_addr
             if len(tx_inputs) > 1:
                 message = json.dumps({'data': "Wrong Input. Inputs must have only one source entry.\n"}), 500
             else:
@@ -144,8 +147,8 @@ def change_stage():
         if len(outputs) == len(inputs) == len(signatures):
             tx = insert_signatures(tx)
             print "Final tx: " + tx
-            result = blockr_pushtx(tx, 'testnet')
-            print result
+            # result = blockr_pushtx(tx, 'testnet')
+            # print result
         # End of the mixing, starting the process again
         reset_arrays()
         stage = "outputs"
@@ -160,22 +163,26 @@ if __name__ == '__main__':
 
     print(" * Connecting to tor")
 
-    with Controller.from_port() as controller:
-        controller.authenticate(PASSWORD)
+    # ToDo: Uncomment, actually running tor from terminal since testing server and client from the same machine
+    # tor_process, controller = init_tor()
 
-        # Create a hidden service where visitors of port 80 get redirected to local
-        # port 5002
+    # ToDo: Delete the following two lines when the above one is uncommented
+    controller = Controller.from_port()
+    controller.authenticate()
 
-        print(" * Creating ephemeral hidden service")
-        response = controller.create_ephemeral_hidden_service({80: 5002}, await_publication=True)
-        server_address = response.service_id + ".onion"
-        print(" * Our service is available at %s, press ctrl+c to quit" % server_address)
+    # Create a hidden service where visitors of port 80 get redirected to local
+    # port 5002
 
-        try:
-            last_update = time()
-            t = threading.Timer(stage_time, change_stage)
-            t.start()
+    print(" * Creating ephemeral hidden service")
+    response = controller.create_ephemeral_hidden_service({80: 5002}, await_publication=True)
+    server_address = response.service_id + ".onion"
+    print(" * Our service is available at %s, press ctrl+c to quit" % server_address)
 
-            app.run(port=5002)
-        finally:
-            print(" * Shutting down our hidden service")
+    try:
+        last_update = time()
+        t = threading.Timer(stage_time, change_stage)
+        t.start()
+
+        app.run(port=5002)
+    finally:
+        print(" * Shutting down our hidden service")
