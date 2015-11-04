@@ -1,6 +1,7 @@
 from pyasn1.codec.der import encoder, decoder
 from pyasn1_modules.rfc2459 import Certificate
 from Crypto.PublicKey import RSA
+from M2Crypto import X509
 from hashlib import sha256
 
 __author__ = 'sdelgado'
@@ -69,8 +70,11 @@ def store_certificate(certificate, filename='paysense'):
     :type filename: str
     :return: None
     """
+
+    x509 = X509.load_cert_der_string(certificate)
+
     # Save the pem data into the pem file
-    certificate.save_pem(filename + '.crt')
+    x509.save_pem(filename + '.crt')
 
     # In order to write the human readable certificate before the encoded data we should load the data just stored
     # and append at the end of the file.
@@ -78,7 +82,7 @@ def store_certificate(certificate, filename='paysense'):
     data = f.read()
     f.close()
     f = open(filename + '.crt', 'w')
-    f.write(certificate.as_text())
+    f.write(x509.as_text())
     f.write(data)
     f.close()
 

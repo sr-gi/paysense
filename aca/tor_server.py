@@ -42,12 +42,13 @@ def post_outputs():
     if stage == "outputs":
         if request.method == "POST" and request.headers["Content-Type"] == "application/json":
             tx_outputs = request.json.get("outputs")
+            print request
             if len(tx_outputs) > 1:
                 message = json.dumps({'data': "Wrong Output. Outputs must have only one source entry.\n"}), 500
             else:
                 outputs.append(tx_outputs[0])
                 # Calculate the next update time
-                message = str(abs(stage_time - (t - last_update)))
+                message = str(abs(stage_time - (time() - last_update)))
             print outputs
         else:
             message = json.dumps({'data': "Wrong request\n"}), 500
@@ -63,6 +64,7 @@ def post_inputs():
     if stage == "inputs":
         if request.method == "POST" and request.headers["Content-Type"] == "application/json":
             tx_inputs = request.json.get("inputs")
+            print request
             if len(tx_inputs) > 1:
                 message = json.dumps({'data': "Wrong Input. Inputs must have only one source entry.\n"}), 500
             else:

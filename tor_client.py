@@ -4,7 +4,9 @@ import stem.process
 from utils.tor.tools import tor_query, SOCKS_PORT
 from stem.util import term
 from time import sleep
+from M2Crypto import EC
 
+from utils.bitcoin.tools import get_priv_key_hex, btc_address_from_cert, get_pub_key_hex
 from utils.bitcoin.transactions import get_tx_signature
 
 __author__ = 'sdelgado'
@@ -13,53 +15,95 @@ __author__ = 'sdelgado'
 # Tor's bootstrap information as it starts. Note that this likely will not
 # work if you have another Tor instance running.
 
-def print_bootstrap_lines(line):
-    if "Bootstrapped " in line:
-        print(term.format(line, term.Color.BLUE))
+# def print_bootstrap_lines(line):
+#     if "Bootstrapped " in line:
+#         print(term.format(line, term.Color.BLUE))
+#
+#
+# def init_tor():
+#     process = stem.process.launch_tor_with_config(
+#         config={
+#             'SocksPort': str(SOCKS_PORT),
+#         },
+#         init_msg_handler=print_bootstrap_lines, timeout=60, take_ownership=True)
+#
+#     return process
 
+# print(term.format("Starting Tor:\n", term.Attr.BOLD))
 
-print(term.format("Starting Tor:\n", term.Attr.BOLD))
-
-tor_process = stem.process.launch_tor_with_config(
-    config={
-        'SocksPort': str(SOCKS_PORT),
-    },
-    init_msg_handler=print_bootstrap_lines, timeout=60, take_ownership=True,
-)
-
-tor_server = "bgpr3ywymhzifnij.onion"
-
-# print(term.format("\nChecking our endpoint:\n", term.Attr.BOLD))
-# print(term.format(tor_query("https://www.atagar.com/echo.php"), term.Color.BLUE))
+tor_server = "eex77u5r3getrar3.onion"
+#tor_process = init_tor()
+headers = ['Content-type: application/json', 'Accept: text/plain']
 
 # SEND OUTPUT
 
-data = [{'value': 47999000, 'address': 'n21HQXRWgbW3XTFTQ44vYDsxi62ve9VXwK'}]
-# data = [{'value': 47999000, 'address': 'n4KA9X2S35n3EDLoGmqbzrEgYZTNf3y1Eb'}, {'value': 2000000, 'address': 'mqcKJjxaaUcG37MFA3jvyDkaznWs4kyLyg'}]
-data = json.dumps({'outputs': data})
-headers = ['Content-type: application/json', 'Accept: text/plain']
-time = tor_query(tor_server + "/outputs", 'POST', data, headers)
+for i in range(2):
+    if i is 0:
+        data = [{'value': 50000000, 'address': 'n2Y8xrB8grxXWbshsoLrYV2JcCm5iuNA44'}]
+    else:
+        data = [{'value': 50000000, 'address': 'myMUBDzQJRFZjZtHaq6VeNMEh3QL9RVSJm'}]
 
-print "Waiting " + time + " for sending the input"
-sleep(float(time))
+    data = json.dumps({'outputs': data})
+    code, response = tor_query(tor_server + "/outputs", 'POST', data, headers)
 
-# SEND INPUTS
+if code is 200:
+    print "Output correctly sent. Resetting tor connection"
+    #tor_process.kill()
+    #tor_process = init_tor()
 
-data = [{'output': u'cd1eec897705dc3f6df2c9221b55f8bba175b325ced022c201eb5dec71e1c1e1:0', 'value': 50000000}]
-# data = [{'output': u'd803b1e18e21ed6d1da82043565e17613070b53a80259b27db139291b4b83092:0', 'value': 50000000}]
-data = json.dumps({'inputs': data})
-headers = ['Content-type: application/json', 'Accept: text/plain']
-time = tor_query(tor_server + "/inputs", 'POST', data, headers)
+    from stem.control import Controller
+    from stem import Signal
 
-print "Waiting " + time + " for getting the tx to be signed"
-sleep(float(time))
+    with Controller.from_port(port=9051) as controller:
+        controller.authenticate("my_password")
+        controller.signal(Signal.NEWNYM)
 
-# GET TX FOR SIGNING
-tx = tor_query(tor_server + '/signatures')
+    print "Waiting " + response + " for sending the input"
+    sleep(float(response))
 
-get_priv_key_hex()
+    # SEND INPUTS
 
-signature = get_tx_signature(tx)
+    for i in range(2):
+        if i is 0:
+            data = [{'output': u'd8fd9878defa266d0aafb1ec8cdf456d01d664536b0fb65501785759811838a2:1', 'value': 50001000}]
+        else:
+            data = [{'output': u'2771c07cacb9ab0c637944bb7309e6d3e7fea72934af22af7ec8baf3881ffba9:1', 'value': 50001000}]
+
+        data = json.dumps({'inputs': data})
+        code, response = tor_query(tor_server + "/inputs", 'POST', data, headers)
+
+    if code is 200:
+        print "Input correctly sent. Resetting tor connection"
+        #tor_process.kill()
+        #tor_process = init_tor()
+
+        print "Waiting " + response + " for getting the tx to be signed"
+        sleep(float(response))
+
+        # GET TX FOR SIGNING
+        code, tx = tor_query(tor_server + '/signatures')
+
+        print tx
+
+        exit(0)
+
+        for i in range(2):
+            private_key_hex = get_priv_key_hex("cs/test/"+str(i)+"/private/paysense.key")
+            bitcoin_address = btc_address_from_cert("cs/test/"+str(i)+"/paysense.crt")
+            public_key = EC.load_pub_key("cs/test/"+str(i)+"/paysense_public.key")
+            public_key_hex = get_pub_key_hex(public_key.pub())
+
+            signature, index = get_tx_signature(tx, private_key_hex, bitcoin_address)
+
+            data = {'signature': signature, 'index': index, 'public_key': public_key_hex}
+            data = json.dumps({'data': data})
+            code, response = tor_query(tor_server + "/signatures", 'POST', data, headers)
+
+            print code, signature
+    else:
+        print response
+else:
+    print response
 
 # # SEND SIGNATURE
 #

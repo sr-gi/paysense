@@ -41,14 +41,7 @@ def count_splits(btc_address):
 
 
 def main():
-    btc_address = "mjZJ8ovUXKv6D4GPM91Vq5sGW9AnhSo4dL"
-    #rpc_test(btc_address)
-    #print count_splits(btc_address)
-    #split(btc_address)
-    from utils.bitcoin.transactions import history_testnet
-
-    history_testnet(btc_address)
-
+    pass
 
 
 if __name__ == '__main__':

@@ -5,7 +5,7 @@ from os import rename
 from time import time
 from json import dumps
 from base64 import b64encode, b64decode
-from random import randint,getrandbits
+from random import randint, getrandbits
 from requests import post
 from os import mkdir, path
 from shutil import rmtree
@@ -16,7 +16,7 @@ from pyasn1.codec.der import encoder, decoder
 from Crypto.PublicKey import RSA as tbRSA
 from Crypto.Util.number import long_to_bytes
 
-from utils.bitcoin.tools import get_pub_key_hex, public_key_to_btc_address, btc_address_from_cert, get_balance
+from utils.bitcoin.tools import get_pub_key_hex, public_key_to_btc_address, btc_address_from_cert, get_balance, private_key_to_wif, get_priv_key_hex
 from utils.bitcoin.transactions import reputation_transfer, blockr_unspent
 from utils.certificate.tools import store_certificate
 
@@ -70,6 +70,10 @@ class CS(object):
             mkdir(tmp)
         ec.save_key(tmp + bitcoin_address + '_key.pem', None)
         ec.save_pub_key(tmp + bitcoin_address + '_public_key.pem')
+
+        # Create the WIF file
+        wif = private_key_to_wif(get_priv_key_hex(tmp + bitcoin_address + '_key.pem'), 'image', 'test')
+        wif.save(tmp + bitcoin_address + "_WIF.png")
 
         return pk, bitcoin_address
 
@@ -130,6 +134,13 @@ class CS(object):
     def registration(self, filename='paysense'):
         certs, certs_der, cert_hashes, blinded_hashes, rands = [], [], [], [], []
 
+        # Create the directories if they don't exist already
+        if not path.exists(self.data_path):
+            mkdir(self.data_path)
+
+        if not path.exists(self.data_path + "private"):
+            mkdir(self.data_path + "private")
+
         try:
             # Get ACA information
             aca_cert_text = b64decode(urlopen(ACA + '/get_ca_cert').read())
@@ -185,18 +196,21 @@ class CS(object):
                         self.btc_address = self.btc_address[p]
 
                         # Rename and move the keys associated with the chosen bitcoin address
-                        rename(tmp + self.btc_address + "_key.pem", "paysense.key")
-                        rename(tmp + self.btc_address + "_public_key.pem", "paysense_public.key")
+                        if not path.exists(self.data_path + "/private"):
+                            mkdir(self.data_path + "private")
+                        rename(tmp + self.btc_address + "_key.pem", self.data_path + "/private/paysense.key")
+                        rename(tmp + self.btc_address + "_public_key.pem", self.data_path + "paysense_public.key")
+                        rename(tmp + self.btc_address + "_WIF.png", self.data_path + "private/wif_qr.png")
 
                         # Delete the temp folder and all the other keys
                         rmtree(tmp)
 
                         # Store the certificate
-                        final_cert = X509.load_cert_der_string(encoder.encode(certs[p]))
-                        store_certificate(final_cert.as_der())
+                        # final_cert = X509.load_cert_der_string(encoder.encode(certs[p]))
+                        store_certificate(encoder.encode(certs[p]), self.data_path + filename)
 
                         # Get the certificate from the just created file with it's new format
-                        f = open(filename + '.crt')
+                        f = open(self.data_path + filename + '.crt')
                         certificate = f.read()
                         f.close()
 
@@ -256,24 +270,66 @@ class CS(object):
 
         return response
 
-    def coinjoin_reputation_exchange(self):
+    def coinjoin_reputation_exchange(self, amount, fee=1000):
+
         # Get the current bitcoin address
         bitcoin_address = btc_address_from_cert(self.data_path + CERT)
 
         # Get the address current balance
         address_balance = get_balance(bitcoin_address)
 
-        # Perform a transaction to an new (intermediate) bitcoin address in order to transform all the bitcoin junks in a single one with the total value.
-        int_btc_addr_pk, int_btc_addr = self.generate_keys()
-        transaction_hash, used_tx = reputation_transfer(self.data_path + S_KEY, bitcoin_address, int_btc_addr, address_balance)
+        # Get the address utxo set
+        utxo_set = blockr_unspent(bitcoin_address, 'testnet')
 
-        # Create the address that will be used as a new pseudonym
-        new_btc_addr_pk, new_btc_addr = self.generate_keys()
+        if len(utxo_set) is 1 and address_balance == amount + fee:
+            # Case 0
+            # The address has already only one utxo with the desired value, that one could be used as input for the reputation transfer protocol.
+            transaction_hash = utxo_set[0].get("output")
 
-        # Build the output of the mixing transaction
-        mixing_output = [{'value': address_balance, 'address': new_btc_addr}]
+        elif len(utxo_set) > 1:
+            # Case 1
+            if address_balance is amount + 2 * fee:
+                # Perform a transaction to oneself in order to transform all the bitcoin utxo in a single one with the total value.
+                # Fees will be payed twice here since two transaction have to be performed
+                transaction_hash, used_tx = reputation_transfer(self.data_path + S_KEY, bitcoin_address, bitcoin_address, address_balance)
+                # Add the output index. Since the transaction has always only one output, it will be always 0.
+                transaction_hash += ":0"
+            elif address_balance > amount + 2 * fee:
+                # Case 2-3
+                # If there's a lot of utxos we should look for one that has the amount we are looking for.
+                utxo_n = None
+                for utxo in utxo_set:
+                    if utxo("value") == amount + fee:
+                        utxo_n = utxo
+                        break
 
-        # Build the input of the mixing transaction
-        mixing_input = [{'output': transaction_hash + ':0', 'value': address_balance}]
+                # If we find that transaction, it could be used as input of the reputation transfer protocol.
+                if utxo_n is not None:
+                    # Case 2
+                    transaction_hash = utxo_n.get("output")
+                # Otherwise, a transaction with the desired amount to oneself should be performed in order to use that output as input of the next transaction.
+                # Fees will be payed twice here since two transaction have to be performed.
+                else:
+                    # Case 3
+                    transaction_hash, used_tx = reputation_transfer(self.data_path + S_KEY, bitcoin_address, bitcoin_address, amount + fee)
+                    transaction_hash += ":0"
+            else:
+                transaction_hash = None
+        else:
+            transaction_hash = None
+
+        if transaction_hash is not None:
+
+            # Create the address that will be used as a new pseudonym
+            new_btc_addr_pk, new_btc_addr = self.generate_keys()
+
+            # Build the output of the mixing transaction
+            mixing_output = [{'value': amount, 'address': new_btc_addr}]
+
+            # Build the input of the mixing transaction
+            mixing_input = [{'output': transaction_hash, 'value': amount + fee}]
 
 
+
+        else:
+            return "You have not enough reputation to perform a reputation exchange. Minimum amount: " + str(amount) + " + " + str(fee) + " (transaction fee)."

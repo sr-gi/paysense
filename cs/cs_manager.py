@@ -26,15 +26,7 @@ def report_data(cs, data, index):
     t.start()
 
 
-def certification_test(count=1000):
-    for i in range(count):
-        cs = CS(get_data_directory(i))
-        r = cs.registration()
-        assert type(r) is not URLError and r.status_code is 200
-    return r.reason
-
-
-def main():
+def cs_control():
     for i in range(CS_COUNT):
         cs = CS(get_data_directory(i))
         data = '34512343291048'
@@ -48,6 +40,21 @@ def main():
             # Set the thread timer
             t = threading.Timer(time, report_data, args=(cs, data, i))
             t.start()
+
+
+def certification_test(count=1000):
+    for i in range(count):
+        cs = CS(get_data_directory(i))
+        r = cs.registration()
+        assert type(r) is not URLError and r.status_code is 200
+    return r.reason
+
+
+def main():
+    #pass
+    for i in range(2):
+        cs = CS("test/"+str(i)+"/")
+        cs.coinjoin_reputation_exchange(50000000)
 
 if __name__ == '__main__':
     main()

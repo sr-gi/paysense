@@ -122,5 +122,5 @@ def api_receive_data():
 
 
 if __name__ == '__main__':
-    #app.run()
-    pay_to_cs("mpzg9PJ1jNh5NfAU49gcB6zUKJBuMPwEqi")
+    app.run()
+    #pay_to_cs("mpzg9PJ1jNh5NfAU49gcB6zUKJBuMPwEqi")

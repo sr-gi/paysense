@@ -74,6 +74,7 @@ def reputation_transfer(s_key, source_btc_address, destination_btc_address, amou
             used_txs.extend(necessary_amount)
     else:
         tx_hash = None
+        index = -1
 
     return tx_hash, used_txs
 
