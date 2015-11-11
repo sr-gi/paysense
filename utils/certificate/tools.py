@@ -3,6 +3,7 @@ from pyasn1_modules.rfc2459 import Certificate
 from Crypto.PublicKey import RSA
 from M2Crypto import X509
 from hashlib import sha256
+from os import path
 
 __author__ = 'sdelgado'
 
@@ -86,3 +87,16 @@ def store_certificate(certificate, filename='paysense'):
     f.write(data)
     f.close()
 
+
+# ToDo: This function originally came from the ACA. The existence of previous certificate should be performed against a DDBB instead of looking for a certificate in the folder.
+# ToDo: since old certificates could be deleted from it. If this is changed, this function should be putted back in the ACA.
+def check_certificate(bitcoin_address, certs_path):
+    """ Checks if a certificate exists in the certificate directory
+    :param bitcoin_address: name of the certificate to look for.
+    :type bitcoin_address: str
+    :param certs_path: system path where the certificate are stored
+    :type certs_path: str
+    :return:
+    :rtype: bool
+    """
+    return path.exists(certs_path + bitcoin_address + '.pem')

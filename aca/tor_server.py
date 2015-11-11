@@ -1,5 +1,5 @@
 import threading
-import stem.process
+import ConfigParser
 
 from stem.control import Controller
 from utils.tor.tools import init_tor
@@ -7,7 +7,7 @@ from flask import Flask, request, json
 from bitcoin import mktx, blockr_pushtx
 from time import time
 
-from utils.bitcoin.transactions import insert_tx_signature
+from utils.bitcoin.transactions import insert_tx_signature, get_tx_info, check_txs_source, is_spent
 
 __author__ = "sdelgado"
 app = Flask(__name__)
@@ -16,7 +16,7 @@ stage = "outputs"
 mixing_amount = 10000
 server_address = None
 
-stage_time = 45.0
+stage_time = 20.0
 last_update = 0
 
 outputs = []
@@ -25,7 +25,12 @@ signatures = []
 
 tx = None
 
-TOR_KEY = "../../aca/private/tor.key"
+# Configuration file data loading
+config = ConfigParser.ConfigParser()
+config.read("paysense.conf")
+
+CS_CERTS_PATH = config.get("Paths", "CERTS_PATH", )
+DCS_BTC_ADDRESS = config.get("BitcoinAddresses", "DCS", )
 
 
 @app.route("/", methods=["GET"])
@@ -45,14 +50,20 @@ def post_outputs():
     if stage == "outputs":
         if request.method == "POST" and request.headers["Content-Type"] == "application/json":
             tx_outputs = request.json.get("outputs")
-            print request.remote_addr
             if len(tx_outputs) > 1:
                 message = json.dumps({'data': "Wrong Output. Outputs must have only one source entry.\n"}), 500
             else:
-                outputs.append(tx_outputs[0])
-                # Calculate the next update time
-                message = str(abs(stage_time - (time() - last_update)))
-            print outputs
+                tx_output = tx_outputs[0]
+
+                if tx_output in outputs:
+                    message = json.dumps({'data': "Wrong Output. The chosen output has been already sent.\n"}), 500
+                elif tx_output.get("value") != mixing_amount:
+                    message = json.dumps({'data': "Wrong Output. The chosen reputation amount doesn't match with the server one.\n"}), 500
+                else:
+                    outputs.append(tx_output)
+                    # Calculate the next update time
+                    message = json.dumps({'data': str(abs(stage_time - (time() - last_update)))})
+                    print outputs
         else:
             message = json.dumps({'data': "Wrong request\n"}), 500
     else:
@@ -67,14 +78,22 @@ def post_inputs():
     if stage == "inputs":
         if request.method == "POST" and request.headers["Content-Type"] == "application/json":
             tx_inputs = request.json.get("inputs")
-            print request.remote_addr
             if len(tx_inputs) > 1:
                 message = json.dumps({'data': "Wrong Input. Inputs must have only one source entry.\n"}), 500
             else:
-                inputs.append(tx_inputs[0])
-                # Calculate the next update time
-                message = str(abs(stage_time - (time() - last_update)))
-                print inputs
+                tx_input = tx_inputs[0]
+                prev_output_hash, prev_output_index = tx_input.get("output").split(":")
+                if tx_input in inputs:
+                    message = json.dumps({'data': "Wrong input. The chosen input has been already sent.\n"}), 500
+                elif is_spent(prev_output_hash, prev_output_index):
+                    message = json.dumps({'data': "Wrong input. The chosen had been previously spent.\n"}), 500
+                elif not check_input_source(prev_output_hash, prev_output_index):
+                    message = json.dumps({'data': "Wrong input. The chosen address contains forbidden payments.\n"}), 500
+                else:
+                    inputs.append(tx_input)
+                    # Calculate the next update time
+                    message = json.dumps({'data': str(abs(stage_time - (time() - last_update)))})
+                    print inputs
         else:
             message = json.dumps({'data': "Wrong request.\n"}), 500
     else:
@@ -98,11 +117,13 @@ def get_signatures():
             signatures.append([tx_signature, input_index, public_key_hex])
             print signatures
 
-            return "OK"
+            message = json.dumps({'data': "Reputation exchange correctly performed\n"})
         else:
-            return "Wrong request"
+            message = json.dumps({'data': "Wrong request.\n"}), 500
     else:
-        return "Stage closed"
+        message = json.dumps({'data': "Stage closed.\n"}), 500
+
+    return message
 
 
 def reset_arrays():
@@ -135,12 +156,12 @@ def change_stage():
     if stage == "outputs" and len(outputs) > 0:
         stage = "inputs"
     elif stage == "inputs":
-        if len(outputs) == len(inputs):
+        if len(outputs) == len(inputs) and len(outputs) > 1:
             tx = mktx(inputs, outputs)
             print tx
             stage = "signatures"
         else:
-            # If a different number of groups of inputs that group of outputs is received, the process is restarted
+            # If a different number of inputs and outputs, on just one of each one, is received, the process is restarted
             reset_arrays()
             stage = "outputs"
     elif stage == "signatures":
@@ -159,6 +180,13 @@ def change_stage():
     print " * Current stage: " + stage
 
 
+def check_input_source(prev_output_hash, prev_output_index):
+    info = get_tx_info(prev_output_hash)
+    source_address = info.get("to")[int(prev_output_index)]
+
+    return check_txs_source(source_address, DCS_BTC_ADDRESS, CS_CERTS_PATH)
+
+
 if __name__ == '__main__':
 
     print(" * Connecting to tor")
@@ -170,8 +198,7 @@ if __name__ == '__main__':
     controller = Controller.from_port()
     controller.authenticate()
 
-    # Create a hidden service where visitors of port 80 get redirected to local
-    # port 5002
+    # Create a hidden service where visitors of port 80 get redirected to local port 5002
 
     print(" * Creating ephemeral hidden service")
     response = controller.create_ephemeral_hidden_service({80: 5002}, await_publication=True)

@@ -302,10 +302,7 @@ def split_btc(btc_address, private_key, amount, parts, size='small', fee=False):
 
     print tx
 
-    if fee:
-        response = blockr_pushtx(tx, "testnet")
-    else:
-        response = transactions.push_tx(tx)
+    response = transactions.push_tx(tx, fee=fee)
 
     return response
 

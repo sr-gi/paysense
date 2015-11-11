@@ -1,6 +1,7 @@
 import pycurl
-from stem.control import Controller
 import stem.process
+
+from stem.control import Controller
 from stem.util import term
 from StringIO import StringIO
 

@@ -52,9 +52,12 @@ def certification_test(count=1000):
 
 def main():
     #pass
-    for i in range(2):
-        cs = CS("test/"+str(i)+"/")
-        cs.coinjoin_reputation_exchange(50000000)
+    import threading
+    for i in range(4):
+        cs = CS("_test/"+str(i)+"/")
+        t = threading.Thread(target=cs.coinjoin_reputation_exchange, args=(10000,))
+        t.start()
+
 
 if __name__ == '__main__':
     main()

@@ -73,7 +73,7 @@ def get_mixing_utxo(data_path, amount, fee):
             # If there's a lot of utxos we should look for one that has the amount we are looking for.
             utxo_n = None
             for utxo in utxo_set:
-                if utxo("value") == amount + fee:
+                if utxo.get("value") == amount + fee:
                     utxo_n = utxo
                     break
 
@@ -325,7 +325,7 @@ class CS(object):
     def coinjoin_reputation_exchange(self, amount, fee=1000):
 
         # Get onion server address and the mixing amount from the ACA
-        data = loads(urlopen("http://158.109.79.170:5001" + '/get_tor_address').read())
+        data = loads(urlopen(ACA + '/get_tor_address').read())
         tor_server = data.get("address")
         mixing_amount = data.get("amount")
 
@@ -362,8 +362,9 @@ class CS(object):
                     print "Output correctly sent. Resetting tor connection"
                     controller.new_circuit()
 
-                    print "Waiting " + response + " for sending the input"
-                    sleep(float(response))
+                    timer = loads(response).get("data")
+                    print "Waiting " + timer + " for sending the input"
+                    sleep(float(timer))
 
                     # Send reputation exchange input
                     data = dumps({'inputs': mixing_input})
@@ -373,27 +374,38 @@ class CS(object):
                         print "Input correctly sent. Resetting tor connection"
                         controller.new_circuit()
 
-                        print "Waiting " + response + " for getting the tx to be signed"
-                        sleep(float(response))
+                        timer = loads(response).get("data")
+                        print "Waiting " + timer + " for getting the tx to be signed"
+                        sleep(float(timer))
 
                         # Get tx hash to sign it
-                        code, tx = tor_query(tor_server + '/signatures')
+                        code, response = tor_query(tor_server + '/signatures')
 
-                        private_key_hex = get_priv_key_hex(self.data_path + S_KEY)
-                        bitcoin_address = btc_address_from_cert(self.data_path + CERT)
-                        public_key = EC.load_pub_key(self.data_path + P_KEY)
-                        public_key_hex = get_pub_key_hex(public_key.pub())
+                        if code is 200:
+                            private_key_hex = get_priv_key_hex(self.data_path + S_KEY)
+                            bitcoin_address = btc_address_from_cert(self.data_path + CERT)
+                            public_key = EC.load_pub_key(self.data_path + P_KEY)
+                            public_key_hex = get_pub_key_hex(public_key.pub())
 
-                        signature, index = get_tx_signature(tx, private_key_hex, bitcoin_address)
+                            signature, index = get_tx_signature(response, private_key_hex, bitcoin_address)
 
-                        data = {'signature': signature, 'index': index, 'public_key': public_key_hex}
-                        data = dumps({'data': data})
+                            data = {'signature': signature, 'index': index, 'public_key': public_key_hex}
+                            data = dumps({'data': data})
 
-                        code, response = tor_query(tor_server + "/signatures", 'POST', data, headers)
+                            code, response = tor_query(tor_server + "/signatures", 'POST', data, headers)
+
+                            data = loads(response).get("data")
+                            return data
+                        else:
+                            data = loads(response).get("data")
+                            return data
+
                     else:
-                        print response
+                        data = loads(response).get("data")
+                        return data
                 else:
-                    print response
+                    data = loads(response).get("data")
+                    return data
             else:
                 return "You have not enough reputation to perform a reputation exchange. Minimum amount: " + str(amount) + " + " + str(fee) + " (transaction fee)."
         else:

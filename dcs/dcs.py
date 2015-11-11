@@ -77,11 +77,13 @@ def verify_data(message, signature, bitcoin_address, cs_pem_data=None):
     return {'ca': ca_verify, 'cs': cs_verify}
 
 
-def pay_to_cs(bitcoin_address, amount=None):
+def pay_to_cs(bitcoin_address, amount=None, used_txs=None):
     if amount is None:
         amount = DEFAULT_AMOUNT
 
-    reputation_transfer(S_KEY, BTC_ADDRESS, bitcoin_address, amount, fee=amount)
+    tx_hash, used_txs = reputation_transfer(S_KEY, BTC_ADDRESS, bitcoin_address, amount, fee=DEFAULT_AMOUNT, used_txs=used_txs)
+
+    return tx_hash, used_txs
 
 
 ############################
@@ -123,4 +125,3 @@ def api_receive_data():
 
 if __name__ == '__main__':
     app.run()
-    #pay_to_cs("mpzg9PJ1jNh5NfAU49gcB6zUKJBuMPwEqi")

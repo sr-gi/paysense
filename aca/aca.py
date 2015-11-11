@@ -8,19 +8,14 @@ from pyasn1_modules.rfc2459 import Certificate
 from pyasn1.codec.der import decoder
 from Crypto.PublicKey import RSA
 
-from utils.certificate.tools import certificate_hashing, check_blind_hash
-from utils.bitcoin.transactions import history_testnet
+from utils.certificate.tools import certificate_hashing, check_blind_hash, check_certificate
+from utils.bitcoin.transactions import history_testnet, check_txs_source
 
 __author__ = 'sdelgado'
 
 ############################
 #     GLOBAL VARIABLES     #
 ############################
-
-# Locals paths to the ACA files
-ACA_CERT = 'paysense.crt'
-ACA_KEY = 'private/paysense.key'
-CS_CERTS_PATH = 'certs/'
 
 # Configuration file data loading
 config = ConfigParser.ConfigParser()
@@ -29,6 +24,10 @@ config.read("paysense.conf")
 DCS_BTC_ADDRESS = config.get("BitcoinAddresses", "DCS", )
 CERT_COUNT = int(config.get("Misc", "CertCount"))
 
+# Locals paths to the ACA files
+ACA_CERT = config.get("Paths", "CERT", )
+ACA_KEY = config.get("Paths", "KEY", )
+CS_CERTS_PATH = config.get("Paths", "CERTS_PATH", )
 
 ############################
 #        FUNCTIONS         #
@@ -63,14 +62,6 @@ def check_hashes_validity(certs_der, rands):
                 response = validity
                 break
     return response
-
-
-# Checks if a certificate exists in the certificate directory
-# @bitcoin_address is the name of the certificate to look for
-# @return true/false depending on if the file exists or not
-def check_certificate(bitcoin_address):
-    return path.exists(CS_CERTS_PATH + bitcoin_address + '.pem')
-
 
 # Checks the payers in the transaction history of a bitcoin address
 # ToDo: FIX THIS FUNCTION
@@ -132,7 +123,7 @@ def store_certificate(certificate, bitcoin_address):
 # @bitcoin_address is the CS pseudonym. It is used to look for the specific file name in the certificates directory.
 # @return the requested certificate
 def get_cs_certificate(bitcoin_address):
-    if check_certificate(bitcoin_address):
+    if check_certificate(CS_CERTS_PATH, bitcoin_address):
         f = open(CS_CERTS_PATH + bitcoin_address + '.pem')
         certificate = f.read()
         f.close()
@@ -248,12 +239,7 @@ def api_store_cert():
 # ToDo: CHANGE THIS FUNCTION
 @app.route('/reputation_exchange', methods=['GET'])
 def api_verify_reputation_exchange():
-    # Verifies the reputation exchange between a certified bitcoin address, and a new one.
-    # Because of in the first version of the PaySense the ACA generate the keys and the certificates, the verification
-    # can't be done exactly how it's supposed to be. According to the paper, the requester CS should perform a reputation
-    # transaction to a new bitcoin address and send that address to the ACA to be verified and certified. In this version
-    # both addresses are already certified, but the ACA checks that the reputation of the new address comes only from the
-    # first one, and also that the reputation of the previous address is also correct.
+    # Verifies the correctness of a reputation exchange between a certified bitcoin address and a new one.
 
     verified = True
 
@@ -278,14 +264,11 @@ def api_verify_reputation_exchange():
         # If it's verified that there's only one from address in the history transaction of the new address, the correctness
         # of the transactions from the old_address is checked.
         if verified:
-            old_history = history_testnet(old_btc_address)
-            # ToDo: Think how to verify the correctness of the transactions from the old bitcoin address. We could calculate the amount of bitcoins
-            # ToDo: that came from the DCS, and check if it is lower than the reputation transferred, or directly check the reputation value stored in the DCS
-            # ToDo: DB (actually not implemented) and check that the amount transferred is lower than that one.
+            verified = check_txs_source(old_btc_address, DCS_BTC_ADDRESS, CS_CERTS_PATH)
 
     response = {'verified': verified}
     return jsonify(response)
 
 
 if __name__ == '__main__':
-    app.run(host='158.109.79.170', port=5001)
+    app.run(port=5001)

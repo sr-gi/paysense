@@ -1,6 +1,7 @@
 import tools
 from bitcoin import *
 from requests import post
+from utils.certificate.tools import check_certificate
 
 
 __author__ = 'sdelgado'
@@ -47,7 +48,7 @@ def reputation_transfer(s_key, source_btc_address, destination_btc_address, amou
     else:
         used_txs = []
 
-    necessary_amount, total_btc = tools.get_necessary_amount(unspent_transactions, amount + fee)
+    necessary_amount, total_btc = tools.get_necessary_amount(unspent_transactions, amount + fee, 'small')
 
     # Build the output of the payment
     if total_btc is not 0:
@@ -68,18 +69,20 @@ def reputation_transfer(s_key, source_btc_address, destination_btc_address, amou
         for i in range(len(necessary_amount)):
             tx = sign(tx, i, private_key_hex)
 
-        code, reason, tx_hash = push_tx(tx)
+        if fee is not 0:
+            code, reason, tx_hash = push_tx(tx, fee=True)
+        else:
+            code, reason, tx_hash = push_tx(tx)
 
-        if code == '201':
+        if code in ['200', '201']:
             used_txs.extend(necessary_amount)
     else:
         tx_hash = None
-        index = -1
 
     return tx_hash, used_txs
 
 
-def tx_info(tx):
+def get_tx_info(tx):
     """ Gets the basic information from a given bitcoin transaction of the testnet.
 
     :param tx: transaction from where the information is requested.
@@ -107,6 +110,21 @@ def tx_info(tx):
     return {'from': input_addresses, 'to': output_addresses, 'amount': payments, 'confirmations': confirmations}
 
 
+def is_spent(tx_hash, index):
+    """
+    Checks if a certain output of a transaction is spent
+    :param tx_hash: hash of the transaction to be checked
+    :type tx_hash: str
+    :param index: index of the transaction output that will be check
+    :type  index: int
+    :return: True if the output is spent, False otherwise
+    :rtype: bool
+    """
+    response = json.loads(make_request('http://tbtc.blockr.io/api/v1/tx/info/' + tx_hash))
+
+    return bool(response['data']['vouts'][index]['is_spent'])
+
+
 def history_testnet(btc_address):
     """ Gets the history of transaction from a given bitcoin address from the testnet. This function is analogous to the vbuterin's history function from the bitcointools library
     (used all over the code) but using testnet instead of main bitcoin network
@@ -123,12 +141,12 @@ def history_testnet(btc_address):
         txs = data.get('txs')
 
         for i in range(len(txs)):
-            history.append(tx_info(txs[i].get('tx')))
+            history.append(get_tx_info(txs[i].get('tx')))
 
     return history
 
 
-def push_tx(tx, network='testnet'):
+def push_tx(tx, network='testnet', fee=False):
     """ Pushes a transaction to the bitcoin network (the testnet by default) with 0 fees.
 
     :param tx: transaction to be pushed.
@@ -138,20 +156,37 @@ def push_tx(tx, network='testnet'):
     :return: A result consisting on a code (201 if success), a response reason, and the hash of the transaction.
     :rtype: int, str, str
     """
+
     if network in ['testnet', 'main']:
         if network is 'testnet':
-            url = 'https://api.blockcypher.com/v1/btc/test3/txs/push'
+            if fee:
+                url = 'http://tbtc.blockr.io/api/v1/tx/push'
+            else:
+                url = 'https://api.blockcypher.com/v1/btc/test3/txs/push'
         elif network is 'main':
-            url = 'https://api.blockcypher.com/v1/btc/main/txs/push'
+            if fee:
+                url = 'http://btc.blockr.io/api/v1/tx/push'
+            else:
+                url = 'https://api.blockcypher.com/v1/btc/main/txs/push'
 
-        data = {'tx': tx}
+        if fee:
+            data = {'hex': tx}
+        else:
+            data = {'tx': tx}
+
         response = post(url, data=json.dumps(data))
     else:
         response = 'Bad network'
 
     r_code = response.status_code
     r_reason = response.reason
-    if r_code is 201:
+
+    if r_code is 200:
+        # blockr server
+        pushed_tx = json.loads(response.content)
+        tx_hash = str(pushed_tx['data'])
+    elif r_code is 201:
+        # blockcyper server
         pushed_tx = json.loads(response.content)
         tx_hash = str(pushed_tx['tx']['hash'])
     else:
@@ -186,7 +221,7 @@ def get_tx_signature(tx, private_key, btc_address, hashcode=SIGHASH_ALL):
 
     for tx_in in tx_obj['ins']:
         prev_tx_hash = tx_in['outpoint']['hash']
-        prev_tx_info = tx_info(prev_tx_hash)
+        prev_tx_info = get_tx_info(prev_tx_hash)
         if btc_address in prev_tx_info['to']:
             index = tx_obj['ins'].index(tx_in)
 
@@ -219,4 +254,38 @@ def insert_tx_signature(tx, index, signature, public_key):
 
     return serialize(tx_obj)
 
+
+def check_txs_source(btc_address, dcs_address, certs_path):
+    """ Checks if the sources of the funds of the provided bitcoin address are valid.
+        Valid sources are:
+
+        - A previous certified CS (just for the first transaction in the address history)
+        - The DCS
+
+    :param btc_address: bitcoin address that will be checked
+    :type btc_address: str
+    :param dcs_address: bitcoin address of the DCS
+    :type dcs_address: str
+    :param certs_path: path to the folder in which the certificates are stored
+    :type certs_path: str
+    :return:
+    :rtype: bool
+    """
+    txs_history = history_testnet(btc_address)
+    response = True
+
+    for i in range(len(txs_history)):
+        src = txs_history[i].get("from")
+        if len(src) is 1:
+            if i is 0:
+                # ToDo: Check "check_certificate" ToDo.
+                if src[0] != dcs_address and not check_certificate(btc_address, certs_path):
+                    response = False
+            else:
+                if src is not dcs_address:
+                    response = False
+        else:
+            response = False
+
+    return response
 
