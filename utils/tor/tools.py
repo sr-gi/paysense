@@ -12,6 +12,21 @@ CONTROL_PORT = 9051
 
 
 def tor_query(url, method='GET', data=None, headers=None, socks_port=None):
+    """ Performs a http query using tor
+
+    :param url: server address
+    :type url: str
+    :param method: request method (GET, POST, ...)
+    :type method: str
+    :param data: data to be sent to the server
+    :param data: JSON dumped object
+    :param headers: headers of the request
+    :type headers: str array
+    :param socks_port: local socket port where tor is listening to requests (configurable in tor.rc)
+    :type socks_port: int
+    :return: response code and some server response data
+    :rtype str, str
+    """
     output = StringIO()
 
     if socks_port is None:
@@ -42,11 +57,25 @@ def tor_query(url, method='GET', data=None, headers=None, socks_port=None):
 
 
 def print_bootstrap_lines(line):
+    """ Print the bootstrap lines
+    :param line: line to be printed
+    :type line: str
+    :return: None
+    """
     if "Bootstrapped " in line:
         print(term.format(line, term.Color.BLUE))
 
 
 def init_tor(socks_port=None, control_port=None):
+    """ Initiates a tor connection
+
+    :param socks_port: local port socket where tor will listen to requests (configurable in tor.rc)
+    :type socks_port: int
+    :param control_port: local port where tor will listen to control requests (configurable in tor.rc)
+    :type control_port: int
+    :return: a tor process and a controller of the process
+    :rtype process, controller
+    """
     if socks_port is None:
         socks_port = SOCKS_PORT
     if control_port is None:

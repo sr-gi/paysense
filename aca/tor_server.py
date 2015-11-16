@@ -6,8 +6,9 @@ from utils.tor.tools import init_tor
 from flask import Flask, request, json
 from bitcoin import mktx, blockr_pushtx
 from time import time
+from os import getcwd
 
-from utils.bitcoin.transactions import insert_tx_signature, get_tx_info, check_txs_source, is_spent
+from utils.bitcoin.transactions import insert_tx_signature, get_tx_info, check_txs_source, is_spent, local_push
 
 __author__ = "sdelgado"
 app = Flask(__name__)
@@ -16,12 +17,13 @@ stage = "outputs"
 mixing_amount = 10000
 server_address = None
 
-stage_time = 20.0
+stage_time = 60.0 * 5
 last_update = 0
 
 outputs = []
 inputs = []
 signatures = []
+unconfirmed = []
 
 tx = None
 
@@ -29,7 +31,10 @@ tx = None
 config = ConfigParser.ConfigParser()
 config.read("paysense.conf")
 
-CS_CERTS_PATH = config.get("Paths", "CERTS_PATH", )
+# ToDo: Check this
+cwd = getcwd()
+CS_CERTS_PATH = getcwd() + config.get("Paths", "CERTS_PATH", )
+a = cwd + CS_CERTS_PATH
 DCS_BTC_ADDRESS = config.get("BitcoinAddresses", "DCS", )
 
 
@@ -46,7 +51,7 @@ def get_address():
 
 @app.route("/outputs", methods=["POST", "GET"])
 def post_outputs():
-    global last_update
+    global last_update, outputs
     if stage == "outputs":
         if request.method == "POST" and request.headers["Content-Type"] == "application/json":
             tx_outputs = request.json.get("outputs")
@@ -74,7 +79,7 @@ def post_outputs():
 
 @app.route("/inputs", methods=["POST", "GET"])
 def post_inputs():
-    global last_update
+    global last_update, inputs
     if stage == "inputs":
         if request.method == "POST" and request.headers["Content-Type"] == "application/json":
             tx_inputs = request.json.get("inputs")
@@ -85,11 +90,13 @@ def post_inputs():
                 prev_output_hash, prev_output_index = tx_input.get("output").split(":")
                 if tx_input in inputs:
                     message = json.dumps({'data': "Wrong input. The chosen input has been already sent.\n"}), 500
-                elif is_spent(prev_output_hash, prev_output_index):
+                elif is_spent(prev_output_hash, int(prev_output_index)):
                     message = json.dumps({'data': "Wrong input. The chosen had been previously spent.\n"}), 500
                 elif not check_input_source(prev_output_hash, prev_output_index):
                     message = json.dumps({'data': "Wrong input. The chosen address contains forbidden payments.\n"}), 500
                 else:
+                    if get_tx_info(prev_output_hash)['confirmations'] < 6:
+                        unconfirmed.append(prev_output_hash)
                     inputs.append(tx_input)
                     # Calculate the next update time
                     message = json.dumps({'data': str(abs(stage_time - (time() - last_update)))})
@@ -104,7 +111,7 @@ def post_inputs():
 
 @app.route("/signatures", methods=["POST", "GET"])
 def get_signatures():
-    global tx
+    global tx, signatures
     if stage == "signatures":
         if request.method == "GET" and tx is not None:
             return tx
@@ -117,7 +124,7 @@ def get_signatures():
             signatures.append([tx_signature, input_index, public_key_hex])
             print signatures
 
-            message = json.dumps({'data': "Reputation exchange correctly performed\n"})
+            message = json.dumps({'data': str(abs(stage_time - (time() - last_update)))})
         else:
             message = json.dumps({'data': "Wrong request.\n"}), 500
     else:
@@ -127,17 +134,19 @@ def get_signatures():
 
 
 def reset_arrays():
-    global outputs, inputs, signatures
+    global outputs, inputs, signatures, unconfirmed
 
-    print "Resetting arrays. Current stage :" + stage
+    print "Resetting arrays. Current stage: " + stage
     print "Arrays status: "
     print "outputs : " + str(outputs) + " with len : " + str(len(outputs))
     print "inputs : " + str(inputs) + " with len : " + str(len(inputs))
+    print "unconfirmed : " + str(unconfirmed) + " with len : " + str(len(unconfirmed))
     print "signatures : " + str(signatures) + " with len : " + str(len(signatures))
 
     outputs = []
     inputs = []
     signatures = []
+    unconfirmed = []
 
 
 def insert_signatures(tx):
@@ -151,12 +160,12 @@ def insert_signatures(tx):
 
 
 def change_stage():
-    global stage, tx, inputs, outputs, last_update
+    global stage, tx, inputs, outputs, confirmed, last_update, stage_time
 
     if stage == "outputs" and len(outputs) > 0:
         stage = "inputs"
     elif stage == "inputs":
-        if len(outputs) == len(inputs) and len(outputs) > 1:
+        if len(outputs) == len(inputs) and len(outputs) > 0:
             tx = mktx(inputs, outputs)
             print tx
             stage = "signatures"
@@ -168,11 +177,34 @@ def change_stage():
         if len(outputs) == len(inputs) == len(signatures):
             tx = insert_signatures(tx)
             print "Final tx: " + tx
-            # result = blockr_pushtx(tx, 'testnet')
-            # print result
-        # End of the mixing, starting the process again
-        reset_arrays()
-        stage = "outputs"
+            stage = "confirm"
+        else:
+            # If the three arrays are not of the same size, the process is restarted.
+            reset_arrays()
+            stage = "outputs"
+    elif stage == "confirm":
+        confirmed = False
+
+        # Check if there are utxo unconfirmed yet
+        if len(unconfirmed) is not 0:
+            for utxo in unconfirmed:
+                if get_tx_info(utxo)['confirmations'] >= 6:
+                    unconfirmed.pop(utxo)
+
+        if len(unconfirmed) is 0:
+            confirmed = True
+
+        if confirmed:
+            #result = blockr_pushtx(tx, 'testnet')
+            result = local_push(tx)
+            print result
+            print "Transaction correctly published"
+            # End of the mixing, starting the process again
+            reset_arrays()
+            stage = "outputs"
+        else:
+            # Wait for the inputs to be confirmed
+            pass
 
     last_update = time()
     t = threading.Timer(stage_time, change_stage)
@@ -184,7 +216,12 @@ def check_input_source(prev_output_hash, prev_output_index):
     info = get_tx_info(prev_output_hash)
     source_address = info.get("to")[int(prev_output_index)]
 
-    return check_txs_source(source_address, DCS_BTC_ADDRESS, CS_CERTS_PATH)
+    if source_address is not None:
+        response = check_txs_source(source_address, DCS_BTC_ADDRESS, CS_CERTS_PATH)
+    else:
+        response = False
+
+    return response
 
 
 if __name__ == '__main__':

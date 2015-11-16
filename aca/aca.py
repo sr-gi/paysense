@@ -33,6 +33,7 @@ CS_CERTS_PATH = config.get("Paths", "CERTS_PATH", )
 #        FUNCTIONS         #
 ############################
 
+
 # Checks the correctness of the certificates provided by the CS
 def check_certificate_data(certs):
     # ToDo: Decide witch fields of the certificate have to be checked and how
@@ -62,24 +63,6 @@ def check_hashes_validity(certs_der, rands):
                 response = validity
                 break
     return response
-
-# Checks the payers in the transaction history of a bitcoin address
-# ToDo: FIX THIS FUNCTION
-# This function should be changed, makes no sense how it's done now.
-# It should validate that the payments come from the DCS or from a previously certified CS (just the first payment).
-# To be efficient the blockchain should be analyzed only after the certification date of the CS.
-def check_payers(history, expected_payer=None):
-    validation = True
-    if expected_payer is None:
-        expected_payer = DCS_BTC_ADDRESS
-    if len(history) == 0:
-        validation = False
-    for i in range(len(history)):
-        payer = history[i].get('from')
-        if payer is not expected_payer:
-            validation = False
-
-    return validation
 
 
 # Stores a certificate in the certificates path
@@ -192,7 +175,7 @@ def api_sign_in():
         if step == 1:
             message = str(request.json.get("cert_hashes"))
 
-            # ToDo: The user must provide his identity with the cert_hases. Use that as a id to store the data instead of declaring the following variable as global
+            # ToDo: The user must provide his identity with the cert_hashes. Use that as a id to store the data instead of declaring the following variable as global
             # ToDo: Use a true concurrent server?
             global blinded_hashes
             blinded_hashes = eval(b64decode(message))
@@ -236,7 +219,6 @@ def api_store_cert():
 
 
 # Serves the reputation exchange requests from the CSs
-# ToDo: CHANGE THIS FUNCTION
 @app.route('/reputation_exchange', methods=['GET'])
 def api_verify_reputation_exchange():
     # Verifies the correctness of a reputation exchange between a certified bitcoin address and a new one.

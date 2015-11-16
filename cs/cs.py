@@ -55,42 +55,28 @@ def get_mixing_utxo(data_path, amount, fee):
     # Get the address utxo set
     utxo_set = blockr_unspent(bitcoin_address, 'testnet')
 
-    if len(utxo_set) is 1 and address_balance == amount + fee:
-        # Case 0
-        # The address has already only one utxo with the desired value, that one could be used as input for the reputation transfer protocol.
+    transaction_hash = None
+
+    if address_balance == amount + fee and len(utxo_set) is 1:
+        # Case 0. If the address balance is exactly amount + fee the only way to perform the transaction is if there is only one utxo. Otherwise, some balance would be expended to
+        # create a utxo with amount + fee and the total balance will be reduced, concluding in a balance < amount + fee.
         transaction_hash = utxo_set[0].get("output")
+    elif address_balance > amount + fee:
+        # If the balance is greater that amount + fee, a utxo with the exact amount ( amount + fee) will be looked for in the utxo pool.
+        utxo_n = None
+        for utxo in utxo_set:
+            if utxo.get("value") == amount + fee:
+                utxo_n = utxo
+                break
+        # Case 2. If it could be found, that will be the utxo to be used.
+        if utxo_n is not None:
+            transaction_hash = utxo_n.get("output")
 
-    elif len(utxo_set) > 1:
-        # Case 1
-        if address_balance is amount + 2 * fee:
-            # Perform a transaction to oneself in order to transform all the bitcoin utxo in a single one with the total value.
-            # Fees will be payed twice here since two transaction have to be performed
-            transaction_hash, used_tx = reputation_transfer(data_path + S_KEY, bitcoin_address, bitcoin_address, address_balance)
-            # Add the output index. Since the transaction has always only one output, it will be always 0.
-            transaction_hash += ":0"
+        # Case 1 and 3. Otherwise, a transaction to create a utxo of amount + fee should be performed, only if the balance is greater that amount + 2 fee.
         elif address_balance > amount + 2 * fee:
-            # Case 2-3
-            # If there's a lot of utxos we should look for one that has the amount we are looking for.
-            utxo_n = None
-            for utxo in utxo_set:
-                if utxo.get("value") == amount + fee:
-                    utxo_n = utxo
-                    break
-
-            # If we find that transaction, it could be used as input of the reputation transfer protocol.
-            if utxo_n is not None:
-                # Case 2
-                transaction_hash = utxo_n.get("output")
-            # Otherwise, a transaction with the desired amount to oneself should be performed in order to use that output as input of the next transaction.
-            # Fees will be payed twice here since two transaction have to be performed.
-            else:
-                # Case 3
-                transaction_hash, used_tx = reputation_transfer(data_path + S_KEY, bitcoin_address, bitcoin_address, amount + fee)
+            transaction_hash, used_tx = reputation_transfer(data_path + S_KEY, bitcoin_address, bitcoin_address, amount + fee, fee=fee)
+            if transaction_hash is not None:
                 transaction_hash += ":0"
-        else:
-            transaction_hash = None
-    else:
-        transaction_hash = None
 
     return transaction_hash
 
@@ -305,7 +291,7 @@ class CS(object):
         return r.status_code, r.reason, r.content
 
     # This test emulates the CS reputation exchange when he doesn't trust any other CS nor the ACA
-    def self_reputation_exchange(self, new_btc_address, outside_btc_address=None):
+    def self_reputation_exchange(self, new_btc_address, outside_btc_address=None, fee=1000):
 
         bitcoin_address = btc_address_from_cert(self.data_path + CERT)
 
@@ -314,9 +300,9 @@ class CS(object):
         if outside_btc_address is not None:
             # ToDo: Perform a proper way to withdraw reputation
             reputation_withdraw = (float(randint(2, 5)) / 100) * address_balance
-            reputation_transfer(self.data_path + S_KEY, bitcoin_address, new_btc_address, address_balance, outside_btc_address, int(reputation_withdraw))
+            reputation_transfer(self.data_path + S_KEY, bitcoin_address, new_btc_address, address_balance, outside_btc_address, int(reputation_withdraw) - fee, fee)
         else:
-            reputation_transfer(self.data_path + S_KEY, bitcoin_address, new_btc_address, address_balance)
+            reputation_transfer(self.data_path + S_KEY, bitcoin_address, new_btc_address, address_balance - fee, fee=fee)
 
         response = urlopen(ACA + '/reputation_exchange?new_btc_address=' + new_btc_address)
 
@@ -331,9 +317,9 @@ class CS(object):
 
         if mixing_amount == amount:
 
-            transaction_hash = get_mixing_utxo(self.data_path, amount, fee)
+            utxo = get_mixing_utxo(self.data_path, amount, fee)
 
-            if transaction_hash is not None:
+            if utxo is not None:
 
                 # Create the address that will be used as a new pseudonym
                 new_btc_addr_pk, new_btc_addr = self.generate_keys()
@@ -342,7 +328,7 @@ class CS(object):
                 mixing_output = [{'value': amount, 'address': new_btc_addr}]
 
                 # Build the input of the mixing transaction
-                mixing_input = [{'output': transaction_hash, 'value': amount + fee}]
+                mixing_input = [{'output': utxo, 'value': amount + fee}]
 
                 print "Connecting to " + tor_server
                 # ToDo: Uncomment, actually running tor from terminal since testing server and client from the same machine
@@ -393,6 +379,8 @@ class CS(object):
                             data = dumps({'data': data})
 
                             code, response = tor_query(tor_server + "/signatures", 'POST', data, headers)
+
+                            # ToDo: Make the new registration with the ACA if the data is confirmed
 
                             data = loads(response).get("data")
                             return data

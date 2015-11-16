@@ -1,3 +1,5 @@
+from bitcoinrpc.authproxy import AuthServiceProxy
+
 import tools
 from bitcoin import *
 from requests import post
@@ -48,7 +50,9 @@ def reputation_transfer(s_key, source_btc_address, destination_btc_address, amou
     else:
         used_txs = []
 
-    necessary_amount, total_btc = tools.get_necessary_amount(unspent_transactions, amount + fee, 'small')
+    # It used to be 'small' instead of 'big', but there's some problem with the transaction priority when the small ones are used, maybe more fee must be payed.
+    # ToDo: Check what happens with the transaction priority
+    necessary_amount, total_btc = tools.get_necessary_amount(unspent_transactions, amount + fee, 'big')
 
     # Build the output of the payment
     if total_btc is not 0:
@@ -70,11 +74,13 @@ def reputation_transfer(s_key, source_btc_address, destination_btc_address, amou
             tx = sign(tx, i, private_key_hex)
 
         if fee is not 0:
-            code, reason, tx_hash = push_tx(tx, fee=True)
+            #code, reason, tx_hash = push_tx(tx, fee=True)
+            tx_hash = local_push(tx)
+            code = 200
         else:
             code, reason, tx_hash = push_tx(tx)
 
-        if code in ['200', '201']:
+        if code in [200, 201]:
             used_txs.extend(necessary_amount)
     else:
         tx_hash = None
@@ -95,9 +101,15 @@ def get_tx_info(tx):
     output_addresses = []
     payments = []
 
-    response = json.loads(make_request('http://tbtc.blockr.io/api/v1/tx/info/' + tx))
-    vins = response.get('data').get('trade').get('vins')
-    vouts = response.get('data').get('trade').get('vouts')
+    try:
+        response = json.loads(make_request('http://tbtc.blockr.io/api/v1/tx/info/' + tx))
+    except Exception as e:
+        status = json.loads(e.message).get('status')
+        if status in ['error', 'fail']:
+            return {'from': None, 'to': None, 'amount': None, 'confirmations': 0}
+
+    vins = response.get('data').get('vins')
+    vouts = response.get('data').get('vouts')
     confirmations = response.get('data').get('confirmations')
 
     for i in range(len(vins)):
@@ -120,9 +132,14 @@ def is_spent(tx_hash, index):
     :return: True if the output is spent, False otherwise
     :rtype: bool
     """
-    response = json.loads(make_request('http://tbtc.blockr.io/api/v1/tx/info/' + tx_hash))
+    try:
+        response = make_request('http://tbtc.blockr.io/api/v1/tx/info/' + tx_hash)
+        data = json.loads(response)
+        result = bool(data['data']['vouts'][index]['is_spent'])
+    except Exception as e:
+        result = True
 
-    return bool(response['data']['vouts'][index]['is_spent'])
+    return result
 
 
 def history_testnet(btc_address):
@@ -153,6 +170,8 @@ def push_tx(tx, network='testnet', fee=False):
     :type tx: unicode
     :param network: network where the transaction will be pushed.
     :type network: str
+    :param fee: if set a fee will be applied to the transaction
+    :type fee: bool
     :return: A result consisting on a code (201 if success), a response reason, and the hash of the transaction.
     :rtype: int, str, str
     """
@@ -282,10 +301,22 @@ def check_txs_source(btc_address, dcs_address, certs_path):
                 if src[0] != dcs_address and not check_certificate(btc_address, certs_path):
                     response = False
             else:
-                if src is not dcs_address:
+                if src == dcs_address:
+
                     response = False
         else:
             response = False
+
+    return response
+
+# Just for testing, having some problems with blockr push_tx
+def local_push(tx, rpc_user, rpc_password):
+    rpc_user = "sr_gi"
+    rpc_password = "Aqx1xL47eZiKN8v5XjNaJawbmmaMwUKHyTTWEHzrvUbD"
+
+    rpc_connection = AuthServiceProxy("http://"+rpc_user+":"+rpc_password+"@127.0.0.1:18332")
+
+    response = rpc_connection.sendrawtransaction(tx)
 
     return response
 

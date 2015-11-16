@@ -182,7 +182,10 @@ def get_balance(bitcoin_address, network='testnet'):
             url = 'http://btc.blockr.io/api/v1/address/balance/'
 
         r = json.loads(make_request(url + bitcoin_address))
-        response = int(round(100000000 * r['data']['balance']))
+        if r['status'] != 'error':
+            response = int(round(100000000 * r['data']['balance']))
+        else:
+            response = r['message']
     else:
         response = "Wrong network\n"
     return response

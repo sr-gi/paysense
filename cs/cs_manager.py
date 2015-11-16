@@ -29,6 +29,8 @@ def report_data(cs, data, index):
 def cs_control():
     for i in range(CS_COUNT):
         cs = CS(get_data_directory(i))
+
+        # Test data
         data = '34512343291048'
 
         # Launch the first thread without waiting (the first time)
@@ -52,12 +54,15 @@ def certification_test(count=1000):
 
 def main():
     #pass
-    import threading
     for i in range(4):
         cs = CS("_test/"+str(i)+"/")
         t = threading.Thread(target=cs.coinjoin_reputation_exchange, args=(10000,))
         t.start()
 
+    # for i in [1, 3]:
+    #     cs = CS("_test/"+str(i)+"/")
+    #     #cs.self_reputation_exchange("mjZJ8ovUXKv6D4GPM91Vq5sGW9AnhSo4dL")
+    #     cs.registration()
 
 if __name__ == '__main__':
     main()
