@@ -92,11 +92,12 @@ def store_certificate(certificate, filename='paysense'):
 # ToDo: since old certificates could be deleted from it. If this is changed, this function should be putted back in the ACA.
 def check_certificate(bitcoin_address, certs_path):
     """ Checks if a certificate exists in the certificate directory
+
     :param bitcoin_address: name of the certificate to look for.
     :type bitcoin_address: str
     :param certs_path: system path where the certificate are stored
     :type certs_path: str
-    :return:
+    :return: True if the certificate exists, False otherwise
     :rtype: bool
     """
-    return path.exists(certs_path + bitcoin_address + '.pem')
+    return path.exists(certs_path + bitcoin_address + '.pem') 

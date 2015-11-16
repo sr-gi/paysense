@@ -1,0 +1,311 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>utils.certificate package &mdash; PaySense 1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="PaySense 1 documentation" href="index.html"/>
+        <link rel="up" title="utils package" href="utils.html"/>
+        <link rel="next" title="utils.tor package" href="utils.tor.html"/>
+        <link rel="prev" title="utils.bitcoin package" href="utils.bitcoin.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PaySense
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="utils.html">utils package</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="utils.bitcoin.html">utils.bitcoin package</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">utils.certificate package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#module-utils.certificate.tools">utils.certificate.tools module</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="utils.tor.html">utils.tor package</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">PaySense</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="utils.html">utils package</a> &raquo;</li>
+      
+    <li>utils.certificate package</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/utils.certificate.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="utils-certificate-package">
+<h1>utils.certificate package<a class="headerlink" href="#utils-certificate-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-utils.certificate.tools">
+<span id="utils-certificate-tools-module"></span><h2>utils.certificate.tools module<a class="headerlink" href="#module-utils.certificate.tools" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="utils.certificate.tools.certificate_hashing">
+<code class="descclassname">utils.certificate.tools.</code><code class="descname">certificate_hashing</code><span class="sig-paren">(</span><em>cert_der</em>, <em>algorithm='sha256'</em><span class="sig-paren">)</span><a class="headerlink" href="#utils.certificate.tools.certificate_hashing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs the hash of a provided X509 certificate.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>cert_der</strong> (<em>binary DER</em>) &#8211; x509 certificate.</li>
+<li><strong>algorithm</strong> (<em>str</em>) &#8211; hashing algorithm. Sha256 will be used as default.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The hash of the certificate performed using the provided hashing function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">binary</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.certificate.tools.check_blind_hash">
+<code class="descclassname">utils.certificate.tools.</code><code class="descname">check_blind_hash</code><span class="sig-paren">(</span><em>cert_der</em>, <em>blinded_hash</em>, <em>r</em>, <em>ca_cert</em><span class="sig-paren">)</span><a class="headerlink" href="#utils.certificate.tools.check_blind_hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the blind hash of the provided certificate and check if it match with the provided blinded hash</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>cert_der</strong> (<em>binary DER</em>) &#8211; input certificate.</li>
+<li><strong>blinded_hash</strong> (<em>binary</em>) &#8211; input blinded hash to be checked.</li>
+<li><strong>r</strong> (<em>long</em>) &#8211; blinding factor used to perform the blind hash.</li>
+<li><strong>ca_cert</strong> (<em>M2Crypto.X509</em>) &#8211; CA cert. It will be used to extract the public key and perform the hash blinding.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">True if the hashes match, False otherwise.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">bool</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.certificate.tools.check_certificate">
+<code class="descclassname">utils.certificate.tools.</code><code class="descname">check_certificate</code><span class="sig-paren">(</span><em>bitcoin_address</em>, <em>certs_path</em><span class="sig-paren">)</span><a class="headerlink" href="#utils.certificate.tools.check_certificate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if a certificate exists in the certificate directory</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>bitcoin_address</strong> (<em>str</em>) &#8211; name of the certificate to look for.</li>
+<li><strong>certs_path</strong> (<em>str</em>) &#8211; system path where the certificate are stored</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">True if the certificate exists, False otherwise</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">bool</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="utils.certificate.tools.store_certificate">
+<code class="descclassname">utils.certificate.tools.</code><code class="descname">store_certificate</code><span class="sig-paren">(</span><em>certificate</em>, <em>filename='paysense'</em><span class="sig-paren">)</span><a class="headerlink" href="#utils.certificate.tools.store_certificate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stores a certificate in a human readable format</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>certificate</strong> (<em>binary DER</em>) &#8211; certificate to be stored</li>
+<li><strong>filename</strong> (<em>str</em>) &#8211; name or system path (including name) where the certificate will be stored (without extension)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="utils.tor.html" class="btn btn-neutral float-right" title="utils.tor package" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="utils.bitcoin.html" class="btn btn-neutral" title="utils.bitcoin package" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Sergi Delgado Segura.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

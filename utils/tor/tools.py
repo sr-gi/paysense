@@ -25,7 +25,7 @@ def tor_query(url, method='GET', data=None, headers=None, socks_port=None):
     :param socks_port: local socket port where tor is listening to requests (configurable in tor.rc)
     :type socks_port: int
     :return: response code and some server response data
-    :rtype str, str
+    :rtype: str, str
     """
     output = StringIO()
 
@@ -58,6 +58,7 @@ def tor_query(url, method='GET', data=None, headers=None, socks_port=None):
 
 def print_bootstrap_lines(line):
     """ Print the bootstrap lines
+
     :param line: line to be printed
     :type line: str
     :return: None
@@ -74,7 +75,7 @@ def init_tor(socks_port=None, control_port=None):
     :param control_port: local port where tor will listen to control requests (configurable in tor.rc)
     :type control_port: int
     :return: a tor process and a controller of the process
-    :rtype process, controller
+    :rtype: process, controller
     """
     if socks_port is None:
         socks_port = SOCKS_PORT
