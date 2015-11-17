@@ -37,8 +37,8 @@ def hash_160_to_btc_address(h160, v):
 
      Possible values:
 
-        - 0 for main network (PUBKEY_HASH)
-        - 111 For testnet (TESTNET_PUBKEY_HASH)
+        - 0 for main network (PUBKEY_HASH).
+        - 111 For testnet (TESTNET_PUBKEY_HASH).
     :type v: int
     :return: The corresponding bitcoin address.
     :rtype: hex str
@@ -74,9 +74,9 @@ def public_key_to_btc_address(public_key, v='main'):
 def get_pub_key_hex(public_key):
     """ Gets a public key in hexadecimal format from a OpenSSL public key object.
 
-    :param public_key: public key
+    :param public_key: public key.
     :type public_key: OpenSSL.PublicKey
-    :return: public key
+    :return: public key.
     :rtype: hex str
     """
     der = public_key.get_der()
@@ -87,7 +87,7 @@ def get_pub_key_hex(public_key):
 
 # ToDO: Find a way to get the SK without a system call
 def get_priv_key_hex(pk_file_path):
-    """ Gets the EC private key in hexadecimal format from a key file
+    """ Gets the EC private key in hexadecimal format from a key file.
 
     :param pk_file_path: system path where the EC private key is found.
     :type pk_file_path: str
@@ -126,8 +126,8 @@ def private_key_to_wif(private_key, mode='text', v='main'):
         - main network WIF otherwise.
     :rtype:
 
-        - str if mode is 'text'
-        - qrcode otherwise
+        - str if mode is 'text'.
+        - qrcode otherwise.
     """
     if v is 'test':
         v = TESTNET_WIF
@@ -194,16 +194,16 @@ def get_balance(bitcoin_address, network='testnet'):
 def get_necessary_amount(unspent_transactions, amount, size='small'):
     """ Calculates the minimum necessary amount needed to pay the required bitcoins of a transaction.
 
-    :param unspent_transactions: list of the unspent transactions from a bitcoin address
+    :param unspent_transactions: list of the unspent transactions from a bitcoin address.
     :type unspent_transactions: list
     :param amount: desired amount to be paid.
     :type amount: int
     :param size: represent the size of the bitcoin groups that will be chosen to pay the transaction.
 
-        - the unspent bitcoins will be chosen from the bigger groups to the smaller ones if size is 'big'
+        - the unspent bitcoins will be chosen from the bigger groups to the smaller ones if size is 'big'.
         - them will be chosen in the opposite way otherwise.
     :type size: str
-    :return: A list with the unspent bitcoins to be used, and the total amount of them (that will be at least equal to **amount**)
+    :return: A list with the unspent bitcoins to be used, and the total amount of them (that will be at least equal to **amount**).
     :rtype: list, int
     """
     if len(unspent_transactions) is 0 or unspent_transactions is None:
@@ -263,12 +263,12 @@ def split_btc(btc_address, private_key, amount, parts, size='small', fee=False):
     :type private_key: hex str
     :param amount: amount of each one of the parts.
     :type amount: int
-    :param parts: number of parts of :param amount generated
+    :param parts: number of parts of :param amount generated.
     :type parts: int
     :param size: size of the unspent bitcoins that will be split.
     :type size: str
 
-    - the smaller unspent bitcoins will be split is size is 'small'
+    - the smaller unspent bitcoins will be split is size is 'small'.
     - the bigger ones will be split otherwise.
 
     :param fee: defines if the transaction will pay fees or not. If fee is 'True' a fee of :param amount will be payed.

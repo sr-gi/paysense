@@ -62,27 +62,29 @@ def check_blind_hash(cert_der, blinded_hash, r, ca_cert):
     return response
 
 
-def store_certificate(certificate, filename='paysense'):
-    """ Stores a certificate in a human readable format
+def store_certificate(certificate, filename='paysense', extension='.crt'):
+    """ Stores a certificate in a human readable format.
 
-    :param certificate: certificate to be stored
+    :param certificate: certificate to be stored.
     :type certificate: binary DER
-    :param filename: name or system path (including name) where the certificate will be stored (without extension)
+    :param filename: name or system path (including name) where the certificate will be stored (without extension).
     :type filename: str
+    :param extension: file extension.
+    :type extension: str
     :return: None
     """
 
     x509 = X509.load_cert_der_string(certificate)
 
     # Save the pem data into the pem file
-    x509.save_pem(filename + '.crt')
+    x509.save_pem(filename + extension)
 
     # In order to write the human readable certificate before the encoded data we should load the data just stored
     # and append at the end of the file.
-    f = open(filename + '.crt', 'r')
+    f = open(filename + extension, 'r')
     data = f.read()
     f.close()
-    f = open(filename + '.crt', 'w')
+    f = open(filename + extension, 'w')
     f.write(x509.as_text())
     f.write(data)
     f.close()
@@ -91,13 +93,14 @@ def store_certificate(certificate, filename='paysense'):
 # ToDo: This function originally came from the ACA. The existence of previous certificate should be performed against a DDBB instead of looking for a certificate in the folder.
 # ToDo: since old certificates could be deleted from it. If this is changed, this function should be putted back in the ACA.
 def check_certificate(bitcoin_address, certs_path):
-    """ Checks if a certificate exists in the certificate directory
+    """ Checks if a certificate exists in the certificate directory.
 
     :param bitcoin_address: name of the certificate to look for.
     :type bitcoin_address: str
-    :param certs_path: system path where the certificate are stored
+    :param certs_path: system path where the certificate are stored.
     :type certs_path: str
-    :return: True if the certificate exists, False otherwise
+    :return: True if the certificate exists, False otherwise.
     :rtype: bool
     """
-    return path.exists(certs_path + bitcoin_address + '.pem') 
+
+    return path.exists(certs_path + bitcoin_address + '.pem')

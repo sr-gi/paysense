@@ -126,16 +126,5 @@ def api_receive_data():
 if __name__ == '__main__':
     app.run()
 
-    # tx_hash, used_txs = pay_to_cs("n3MbkFMzaUBHM4PNXNRvBNDYdicDkP4H6d", 6000)
-    # print tx_hash
-    # tx_hash, used_txs = pay_to_cs("n3MbkFMzaUBHM4PNXNRvBNDYdicDkP4H6d", 6000, used_txs)
-    # print tx_hash
-    # tx_hash, used_txs = pay_to_cs("mn2vRVWVDt1GkZWCN3oqPefAERFTTBNBmW", 6000, used_txs)
-    # print tx_hash
-    # tx_hash, used_txs = pay_to_cs("mn2vRVWVDt1GkZWCN3oqPefAERFTTBNBmW", 6000, used_txs)
-    # print tx_hash
-    # tx_hash, used_txs = pay_to_cs("mn2vRVWVDt1GkZWCN3oqPefAERFTTBNBmW", 6000, used_txs)
-    # print tx_hash
-
 
 

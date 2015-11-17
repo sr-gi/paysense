@@ -3,12 +3,14 @@ from os import path
 import ConfigParser
 from random import randint
 from flask import Flask, request, jsonify, json
-from M2Crypto import X509, urllib2
+from M2Crypto import X509, urllib2, EVP
 from pyasn1_modules.rfc2459 import Certificate
-from pyasn1.codec.der import decoder
+from pyasn1_modules.rfc2314 import Signature
+from pyasn1.codec.der import decoder, encoder
 from Crypto.PublicKey import RSA
+from Crypto.Util.number import long_to_bytes
 
-from utils.certificate.tools import certificate_hashing, check_blind_hash, check_certificate
+from utils.certificate.tools import certificate_hashing, check_blind_hash, check_certificate, store_certificate as utils_store_certificate
 from utils.bitcoin.transactions import history_testnet, check_txs_source
 
 __author__ = 'sdelgado'
@@ -35,16 +37,26 @@ CS_CERTS_PATH = config.get("Paths", "CERTS_PATH", )
 
 
 # Checks the correctness of the certificates provided by the CS
-def check_certificate_data(certs):
+def check_certificate_data(certificates):
+    """
+    Checks the correctness of the certificates provided by the CS.
+    :param certificates: the provided certificates.
+    :type certificates: DER str list
+    :return: True if the certificates are correct, False otherwise.
+    :rtype: bool
+    """
     # ToDo: Decide witch fields of the certificate have to be checked and how
     return True
 
 
-def check_hashes_validity(certs_der, rands):
+def check_hashes_validity(certificates, rands):
     """ Check if the provided blind hashes matches with the blinded hashes of the provided certificates.
-    :param certs_der: are the provided certificates in der format.
-    :param rands: re the provided blinding factors.
+
+    :param certificates: the provided certificates.
+    :type certificates: DER str list
+    :param rands: the provided blinding factors.
     :return: True if all the hashes match. False otherwise.
+    :rtype: bool
     """
     response = True
 
@@ -54,9 +66,9 @@ def check_hashes_validity(certs_der, rands):
     f.close()
     aca_cert = X509.load_cert_string(aca_cert_text)
 
-    for i in range(len(certs_der)):
+    for i in range(len(certificates)):
         if i is not r:
-            validity = check_blind_hash(certs_der[i], blinded_hashes[i], rands[i], aca_cert)
+            validity = check_blind_hash(certificates[i], blinded_hashes[i], rands[i], aca_cert)
 
             # Check that the provided blind signatures match with the calculated ones
             if not validity:
@@ -66,7 +78,7 @@ def check_hashes_validity(certs_der, rands):
 
 
 # Stores a certificate in the certificates path
-# @certificate is a str representation of the certificate
+# @certificate is a DER str representation of the certificate
 # @bitcoin_address is the name that will be used to store this certificate. This name matches with the bitcoin address
 # of the CS.
 def store_certificate(certificate, bitcoin_address):
@@ -75,11 +87,8 @@ def store_certificate(certificate, bitcoin_address):
     pk = RSA.importKey(aca_cert.get_pubkey().as_der())
 
     # Obtain the TBS certificate
-    cert = X509.load_cert_string(certificate)
-
-    cert_hash = certificate_hashing(cert.as_der())
-
-    asn1_cert = decoder.decode(cert.as_der(), asn1Spec=Certificate())[0]
+    cert_hash = certificate_hashing(certificate)
+    asn1_cert = decoder.decode(certificate, asn1Spec=Certificate())[0]
 
     # Extract the certificate signature
     signature_bin = asn1_cert.getComponentByName("signatureValue")
@@ -90,11 +99,9 @@ def store_certificate(certificate, bitcoin_address):
         signature_str += str(i)
     signature = long(signature_str, 2)
 
-    # Check the parsed signature matches with the signature ob the obtained hash
+    # Check the parsed signature matches with the signature of the obtained hash
     if pk.verify(cert_hash, [signature, 0]):
-        f = open(CS_CERTS_PATH + bitcoin_address + '.pem', 'w')
-        f.write(certificate)
-        f.close()
+        utils_store_certificate(certificate, CS_CERTS_PATH + bitcoin_address, '.pem')
         response = "Certificate correctly stored"
     else:
         response = json.dumps({'data': "Bad certificate\n"}), 500
@@ -205,6 +212,34 @@ def api_sign_in():
     return response
 
 
+@app.route('/sign_certificate', methods=['POST'])
+def sign_certificate():
+    if request.headers['Content-Type'] == 'application/json':
+        certificate = b64decode(str(request.json.get("certificate")))
+        bitcoin_address = str(request.json.get("bitcoin_address"))
+
+        # Get the ACA secret key
+        f = open(ACA_KEY, "r")
+        sk_string = f.read()
+        f.close()
+        sk = RSA.importKey(sk_string)
+
+        # Get the certificate hash and the asn1 representation of the certificate
+        certificate_hash = certificate_hashing(certificate)
+        signature = sk.sign(certificate_hash, 1)[0]
+        asn1_cert = decoder.decode(certificate, asn1Spec=Certificate())[0]
+
+        # Attach the signature to the certificate
+        bin_signature = Signature("'%s'H" % ''.join("%02X" % ord(c) for c in long_to_bytes(signature)))
+        asn1_cert.setComponentByName("signatureValue", bin_signature)
+
+        # Store the certificate
+        der_cert = encoder.encode(asn1_cert)
+        store_certificate(encoder.encode(asn1_cert), bitcoin_address)
+
+        return b64encode(der_cert)
+
+
 # Serves the certificate storage received from the CSs
 @app.route('/store_certificate', methods=['POST'])
 def api_store_cert():
@@ -212,7 +247,9 @@ def api_store_cert():
         certificate = str(request.json.get("certificate"))
         bitcoin_address = str(request.json.get("bitcoin_address"))
 
-        response = store_certificate(certificate, bitcoin_address)
+        x509_cert = X509.load_cert_string(certificate)
+
+        response = store_certificate(x509_cert, bitcoin_address)
     else:
         response = json.dumps({'data': "Bad request\n"}), 500
     return response

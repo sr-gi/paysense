@@ -26,6 +26,7 @@ signatures = []
 unconfirmed = []
 
 tx = None
+confirmed = False
 
 # Configuration file data loading
 config = ConfigParser.ConfigParser()
@@ -133,6 +134,17 @@ def get_signatures():
     return message
 
 
+@app.route("/confirmation", methods=["GET"])
+def get_confirmation():
+    if stage == "confirm":
+        if confirmed:
+            timer = '0'
+        else:
+            timer = str(abs(stage_time - (time() - last_update)))
+
+        return json.dumps({'confirmation': str(confirmed), 'time': timer})
+
+
 def reset_arrays():
     global outputs, inputs, signatures, unconfirmed
 
@@ -160,7 +172,7 @@ def insert_signatures(tx):
 
 
 def change_stage():
-    global stage, tx, inputs, outputs, confirmed, last_update, stage_time
+    global stage, tx, inputs, outputs, confirmed, last_update, stage_time, confirmed
 
     if stage == "outputs" and len(outputs) > 0:
         stage = "inputs"
@@ -183,28 +195,27 @@ def change_stage():
             reset_arrays()
             stage = "outputs"
     elif stage == "confirm":
-        confirmed = False
-
-        # Check if there are utxo unconfirmed yet
-        if len(unconfirmed) is not 0:
-            for utxo in unconfirmed:
-                if get_tx_info(utxo)['confirmations'] >= 6:
-                    unconfirmed.pop(utxo)
-
-        if len(unconfirmed) is 0:
-            confirmed = True
-
         if confirmed:
+            # ToDo: Change this once the problems with the blockr API has been solved
             #result = blockr_pushtx(tx, 'testnet')
             result = local_push(tx)
             print result
             print "Transaction correctly published"
+
             # End of the mixing, starting the process again
             reset_arrays()
+            confirmed = False
             stage = "outputs"
         else:
             # Wait for the inputs to be confirmed
-            pass
+            # Check if there are utxo unconfirmed yet
+            if len(unconfirmed) is not 0:
+                for utxo in unconfirmed:
+                    if get_tx_info(utxo)['confirmations'] >= 6:
+                        unconfirmed.pop(utxo)
+
+            if len(unconfirmed) is 0:
+                confirmed = True
 
     last_update = time()
     t = threading.Timer(stage_time, change_stage)

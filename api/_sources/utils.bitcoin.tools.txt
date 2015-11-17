@@ -1,0 +1,7 @@
+utils.bitcoin.tools module
+==========================
+
+.. automodule:: utils.bitcoin.tools
+    :members:
+    :undoc-members:
+    :show-inheritance:

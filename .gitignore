@@ -1,5 +1,5 @@
 .idea/
+.documentation/
+_tmp*
 .DS_Store
 *.pyc
-documentation/
-_*

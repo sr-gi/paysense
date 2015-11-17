@@ -12,7 +12,7 @@ __author__ = 'sdelgado'
 def reputation_transfer(s_key, source_btc_address, destination_btc_address, amount, outside_btc_address=None, outside_amount=None, fee=0, used_txs=None):
     """ Performs a reputation transfer between a source and a destination bitcoin address.
 
-    :param s_key: path to a private a elliptic curve private key
+    :param s_key: path to a private a elliptic curve private key.
     :type s_key: str
     :param source_btc_address: source bitcoin address, where the bitcoins came from.
     :type source_btc_address: str
@@ -50,9 +50,7 @@ def reputation_transfer(s_key, source_btc_address, destination_btc_address, amou
     else:
         used_txs = []
 
-    # It used to be 'small' instead of 'big', but there's some problem with the transaction priority when the small ones are used, maybe more fee must be payed.
-    # ToDo: Check what happens with the transaction priority
-    necessary_amount, total_btc = tools.get_necessary_amount(unspent_transactions, amount + fee, 'big')
+    necessary_amount, total_btc = tools.get_necessary_amount(unspent_transactions, amount + fee, 'small')
 
     # Build the output of the payment
     if total_btc is not 0:
@@ -74,6 +72,7 @@ def reputation_transfer(s_key, source_btc_address, destination_btc_address, amou
             tx = sign(tx, i, private_key_hex)
 
         if fee is not 0:
+            # ToDo: Change this once the problems with the blockr API has been solved
             #code, reason, tx_hash = push_tx(tx, fee=True)
             tx_hash = local_push(tx)
             code = 200
@@ -124,12 +123,13 @@ def get_tx_info(tx):
 
 def is_spent(tx_hash, index):
     """
-    Checks if a certain output of a transaction is spent
-    :param tx_hash: hash of the transaction to be checked
+    Checks if a certain output of a transaction is spent.
+
+    :param tx_hash: hash of the transaction to be checked.
     :type tx_hash: str
-    :param index: index of the transaction output that will be check
+    :param index: index of the transaction output that will be check.
     :type  index: int
-    :return: True if the output is spent, False otherwise
+    :return: True if the output is spent, False otherwise.
     :rtype: bool
     """
     try:
@@ -144,11 +144,11 @@ def is_spent(tx_hash, index):
 
 def history_testnet(btc_address):
     """ Gets the history of transaction from a given bitcoin address from the testnet. This function is analogous to the vbuterin's history function from the bitcointools library
-    (used all over the code) but using testnet instead of main bitcoin network
+    (used all over the code) but using testnet instead of main bitcoin network.
 
-    :param btc_address:  given bitcoin address
+    :param btc_address:  given bitcoin address.
     :type btc_address: str
-    :return: The history of transaction from the given address, limited to 200 (from the blockr.io api)
+    :return: The history of transaction from the given address, limited to 200 (from the blockr.io api).
     :rtype: list
     """
     history = []
@@ -170,7 +170,7 @@ def push_tx(tx, network='testnet', fee=False):
     :type tx: unicode
     :param network: network where the transaction will be pushed.
     :type network: str
-    :param fee: if set a fee will be applied to the transaction
+    :param fee: if set a fee will be applied to the transaction.
     :type fee: bool
     :return: A result consisting on a code (201 if success), a response reason, and the hash of the transaction.
     :rtype: int, str, str
@@ -223,7 +223,7 @@ def get_tx_signature(tx, private_key, btc_address, hashcode=SIGHASH_ALL):
     :type private_key: hex str
     :param btc_address: bitcoin address used as "from" in the transaction (Where the funds came from).
     :type btc_address: str
-    :param hashcode: indicates which parts of the transaction will be signed. It is set to all by default
+    :param hashcode: indicates which parts of the transaction will be signed. It is set to all by default.
 
         Possible values:
 
@@ -278,16 +278,16 @@ def check_txs_source(btc_address, dcs_address, certs_path):
     """ Checks if the sources of the funds of the provided bitcoin address are valid.
         Valid sources are:
 
-        - A previous certified CS (just for the first transaction in the address history)
-        - The DCS
+        - A previous certified CS (just for the first transaction in the address history).
+        - The DCS.
 
-    :param btc_address: bitcoin address that will be checked
+    :param btc_address: bitcoin address that will be checked.
     :type btc_address: str
-    :param dcs_address: bitcoin address of the DCS
+    :param dcs_address: bitcoin address of the DCS.
     :type dcs_address: str
-    :param certs_path: path to the folder in which the certificates are stored
+    :param certs_path: path to the folder in which the certificates are stored.
     :type certs_path: str
-    :return:
+    :return: Ture if the sources are valid. False otherwise.
     :rtype: bool
     """
     txs_history = history_testnet(btc_address)
@@ -309,10 +309,22 @@ def check_txs_source(btc_address, dcs_address, certs_path):
 
     return response
 
-# Just for testing, having some problems with blockr push_tx
-def local_push(tx, rpc_user, rpc_password):
-    rpc_user = "sr_gi"
-    rpc_password = "Aqx1xL47eZiKN8v5XjNaJawbmmaMwUKHyTTWEHzrvUbD"
+
+def local_push(tx, rpc_user=None, rpc_password=None):
+    """ Pushes a bitcoin transaction to the network using a local rpc server.
+
+    :param tx: transaction to be pushed.
+    :type tx: hex str
+    :param rpc_user: rpc user (could be set in bitcoin.conf).
+    :type rpc_user: str
+    :param rpc_password: rpc password ((could be set in bitcoin.conf).
+    :type rpc_password: str
+    :return: The response of the rpc server, corresponding to the transaction id if it has ben correctly pushed
+    """
+    # Just for testing, having some problems with blockr push_tx
+    if rpc_user is None and rpc_password is None:
+        rpc_user = "sr_gi"
+        rpc_password = "Aqx1xL47eZiKN8v5XjNaJawbmmaMwUKHyTTWEHzrvUbD"
 
     rpc_connection = AuthServiceProxy("http://"+rpc_user+":"+rpc_password+"@127.0.0.1:18332")
 

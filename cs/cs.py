@@ -115,9 +115,10 @@ class CS(object):
 
         return pk, bitcoin_address
 
-    def generate_certificate(self, aca_cert):
+    def generate_certificate(self, aca_cert, btc_address=None, pkey=None,):
 
-        pkey, btc_address = self.generate_keys()
+        if pkey is None and btc_address is None:
+            pkey, btc_address = self.generate_keys()
 
         issuer = aca_cert.get_issuer()
 
@@ -150,7 +151,8 @@ class CS(object):
         cert.set_not_before(cur_time)
         cert.set_not_after(expire_time)
 
-        # # Sign the certificate using the same key type the CA is going to use later
+        # Sign the certificate using the same key type the CA is going to use later
+        # The resulting signature will not be used, it is only for setting the corresponding field into the certificate
         rsa_keys = RSA.gen_key(2046, 65537, callback=lambda x, y, z: None)
         rsa_pkey = EVP.PKey()
         rsa_pkey.assign_rsa(rsa_keys)
@@ -167,6 +169,50 @@ class CS(object):
         cert_hash = digest.digest()
 
         return asn1_cert, cert_hash
+
+    def generate_new_identity(self, btc_addr, new_btc_addr, new_pk, filename='paysense'):
+
+        new_dir = "old/" + btc_addr + "/"
+
+        # Create an 'old' directory if it doesn't exist
+        if not path.exists(self.data_path + 'old'):
+            mkdir(self.data_path + 'old')
+
+        # Create a directory named by the bitcoin address inside the 'old' directory
+        if not path.exists(self.data_path + new_dir):
+            mkdir(self.data_path + new_dir)
+
+        # Move all the old data to its new directory
+        rename(self.data_path + "private", self.data_path + new_dir + "private")
+        rename(self.data_path + btc_addr, self.data_path + new_dir + btc_addr)
+        rename(self.data_path + filename + ".crt", self.data_path + new_dir + filename + ".crt")
+        rename(self.data_path + filename + "_public.key", self.data_path + new_dir + filename + "_public.key")
+
+        aca_cert_text = b64decode(urlopen(ACA + '/get_ca_cert').read())
+        aca_cert = X509.load_cert_string(aca_cert_text)
+
+        asn1_cert, cert_hash = self.generate_certificate(aca_cert, new_btc_addr, new_pk)
+
+        # Create a 'private' directory
+        if not path.exists(self.data_path + 'private'):
+            mkdir(self.data_path + 'private')
+
+        # Create the new identity files
+        rename(self.data_path + new_btc_addr + "_key.pem", self.data_path + "private/" + filename + ".key")
+        rename(self.data_path + new_btc_addr + "_public_key.pem", self.data_path + filename + "_public.key")
+        rename(self.data_path + new_btc_addr + "_WIF.png", self.data_path + "private/wif_qr.png")
+        f = open(self.data_path + new_btc_addr, 'w')
+        f.close()
+
+        certificate = b64encode(encoder.encode(asn1_cert))
+        # Send the final certificate to the ACA
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+        data = {'certificate': certificate, 'bitcoin_address': new_btc_addr}
+        response = post(ACA + "/sign_certificate", data=dumps(data), headers=headers)
+
+        # Store the certificate
+        cert_der = b64decode(response.content)
+        store_certificate(cert_der, self.data_path + filename)
 
     # CS registration
     def registration(self, filename='paysense'):
@@ -244,16 +290,11 @@ class CS(object):
                         rmtree(tmp)
 
                         # Store the certificate
-                        # final_cert = X509.load_cert_der_string(encoder.encode(certs[p]))
-                        store_certificate(encoder.encode(certs[p]), self.data_path + filename)
-
-                        # Get the certificate from the just created file with it's new format
-                        f = open(self.data_path + filename + '.crt')
-                        certificate = f.read()
-                        f.close()
+                        der_cert = encoder.encode(certs[p])
+                        store_certificate(der_cert, self.data_path + filename)
 
                         # Send the final certificate to the ACA
-                        data = {'certificate': certificate, 'bitcoin_address': self.btc_address}
+                        data = {'certificate': der_cert, 'bitcoin_address': self.btc_address}
                         response = post(ACA + "/store_certificate", data=dumps(data), headers=headers)
 
                         return response
@@ -291,19 +332,21 @@ class CS(object):
         return r.status_code, r.reason, r.content
 
     # This test emulates the CS reputation exchange when he doesn't trust any other CS nor the ACA
-    def self_reputation_exchange(self, new_btc_address, outside_btc_address=None, fee=1000):
+    def self_reputation_exchange(self, new_btc_address, bitcoin_address=None, outside_btc_address=None, fee=1000):
 
-        bitcoin_address = btc_address_from_cert(self.data_path + CERT)
+        if bitcoin_address is None:
+            bitcoin_address = btc_address_from_cert(self.data_path + CERT)
 
         address_balance = get_balance(bitcoin_address)
 
         if outside_btc_address is not None:
             # ToDo: Perform a proper way to withdraw reputation
             reputation_withdraw = (float(randint(2, 5)) / 100) * address_balance
-            reputation_transfer(self.data_path + S_KEY, bitcoin_address, new_btc_address, address_balance, outside_btc_address, int(reputation_withdraw) - fee, fee)
+            result = reputation_transfer(self.data_path + S_KEY, bitcoin_address, new_btc_address, address_balance, outside_btc_address, int(reputation_withdraw) - fee, fee)
         else:
-            reputation_transfer(self.data_path + S_KEY, bitcoin_address, new_btc_address, address_balance - fee, fee=fee)
+            result = reputation_transfer(self.data_path + S_KEY, bitcoin_address, new_btc_address, address_balance - fee, fee=fee)
 
+        print result
         response = urlopen(ACA + '/reputation_exchange?new_btc_address=' + new_btc_address)
 
         return response
@@ -380,10 +423,23 @@ class CS(object):
 
                             code, response = tor_query(tor_server + "/signatures", 'POST', data, headers)
 
-                            # ToDo: Make the new registration with the ACA if the data is confirmed
+                            if code is 200:
+                                timer = loads(response).get("data")
+                                print "Waiting " + timer + " for getting the tx pushing confirmation"
+                                sleep(float(timer) * 1.1)
+                                confirmed = False
 
-                            data = loads(response).get("data")
-                            return data
+                                while not confirmed:
+                                    code, response = tor_query(tor_server + '/confirmation')
+                                    data = loads(response)
+                                    confirmed = bool(data.get("confirmation"))
+                                    timer = float(data.get("time"))
+                                    sleep(timer)
+
+                                self.generate_new_identity(bitcoin_address, new_btc_addr, new_btc_addr_pk)
+                                data = loads(response).get("data")
+                                return data
+
                         else:
                             data = loads(response).get("data")
                             return data

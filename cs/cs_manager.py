@@ -54,15 +54,21 @@ def certification_test(count=1000):
 
 def main():
     #pass
-    for i in range(4):
-        cs = CS("_test/"+str(i)+"/")
-        t = threading.Thread(target=cs.coinjoin_reputation_exchange, args=(10000,))
-        t.start()
-
-    # for i in [1, 3]:
+    # cs = CS("CSs/CS_0/")
+    # from M2Crypto import EVP
+    # pk = EVP.load_key("CSs/CS_0/private/paysense.key")
+    # cs.generate_new_identity("mpzg9PJ1jNh5NfAU49gcB6zUKJBuMPwEqi", "mjtqnrY4MC2BGdeas9nN3JyqcvM9weFLB3", pk)
+    # for i in range(4):
     #     cs = CS("_test/"+str(i)+"/")
-    #     #cs.self_reputation_exchange("mjZJ8ovUXKv6D4GPM91Vq5sGW9AnhSo4dL")
-    #     cs.registration()
+    #     t = threading.Thread(target=cs.coinjoin_reputation_exchange, args=(10000,))
+    #     t.start()
+
+    btc_adddrs = ["", "", "", ""]
+
+    for i in range(4):
+        cs = CS("CSs/REP_EX_"+str(i)+"/")
+        #cs.self_reputation_exchange("mjZJ8ovUXKv6D4GPM91Vq5sGW9AnhSo4dL", btc_adddrs[i])
+        cs.registration()
 
 if __name__ == '__main__':
     main()
