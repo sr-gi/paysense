@@ -126,5 +126,17 @@ def api_receive_data():
 if __name__ == '__main__':
     app.run()
 
+    # _, used_txs = pay_to_cs("mgGaUV7c94RPH5XrB9GsNyKZ3KZjobWNbm", 11000)
+
+    # _, used_txs = pay_to_cs("mm2NUowTdxTqqi4En621vosrJqc1a98CVQ", 6000, used_txs)
+    # _, used_txs = pay_to_cs("mm2NUowTdxTqqi4En621vosrJqc1a98CVQ", 6000, used_txs)
+
+    # _, used_txs = pay_to_cs("mvM6D8j5UFMwSJ9eECDQqTXdn79iuuR6jr", 11000, used_txs)
+    # _, used_txs = pay_to_cs("mvM6D8j5UFMwSJ9eECDQqTXdn79iuuR6jr", 5000, used_txs)
+
+    # _, used_txs = pay_to_cs("mwd8R6dNMp9GdrmxNdrG1ZiBjyRi6KLSUo", 5000, used_txs)
+    # _, used_txs = pay_to_cs("mwd8R6dNMp9GdrmxNdrG1ZiBjyRi6KLSUo", 5000, used_txs)
+    # _, used_txs = pay_to_cs("mwd8R6dNMp9GdrmxNdrG1ZiBjyRi6KLSUo", 5000, used_txs)
+
 
 

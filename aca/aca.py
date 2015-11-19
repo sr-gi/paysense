@@ -167,7 +167,7 @@ def api_get_ca_pem():
 
 
 @app.route('/get_tor_address', methods=['GET'])
-def get_tor_address():
+def api_get_tor_address():
     response = urllib2.urlopen("http://127.0.0.1:5002" + '/get_address')
     return response.read()
 
@@ -213,7 +213,7 @@ def api_sign_in():
 
 
 @app.route('/sign_certificate', methods=['POST'])
-def sign_certificate():
+def api_sign_certificate():
     if request.headers['Content-Type'] == 'application/json':
         certificate = b64decode(str(request.json.get("certificate")))
         bitcoin_address = str(request.json.get("bitcoin_address"))
@@ -244,12 +244,10 @@ def sign_certificate():
 @app.route('/store_certificate', methods=['POST'])
 def api_store_cert():
     if request.headers['Content-Type'] == 'application/json':
-        certificate = str(request.json.get("certificate"))
+        certificate = b64decode(str(request.json.get("certificate")))
         bitcoin_address = str(request.json.get("bitcoin_address"))
 
-        x509_cert = X509.load_cert_string(certificate)
-
-        response = store_certificate(x509_cert, bitcoin_address)
+        response = store_certificate(certificate, bitcoin_address)
     else:
         response = json.dumps({'data': "Bad request\n"}), 500
     return response
@@ -269,21 +267,16 @@ def api_verify_reputation_exchange():
     if len(history) != 1:
         verified = False
     else:
-        # If there's only one transaction, the list of 'from addresses' is extracted from the history and is verified that
-        # all the addresses in the list are the same one, that will match with the old_btc_address
-        from_list = history[0].get('from')
-        old_btc_address = ''
-        for address in from_list:
-            if old_btc_address == '':
-                old_btc_address = address
-            else:
-                if old_btc_address != address:
-                    verified = False
 
-        # If it's verified that there's only one from address in the history transaction of the new address, the correctness
-        # of the transactions from the old_address is checked.
-        if verified:
-            verified = check_txs_source(old_btc_address, DCS_BTC_ADDRESS, CS_CERTS_PATH)
+        # If there's only one transaction, the list of 'from addresses' is extracted from the history and is verified that
+        # all the funds in the input addresses list are verified
+        from_list = history[0].get('from')
+        check_list = []
+        for address in from_list:
+            check_list.append(check_txs_source(address, DCS_BTC_ADDRESS, CS_CERTS_PATH))
+
+        if False in check_list:
+            verified = False
 
     response = {'verified': verified}
     return jsonify(response)

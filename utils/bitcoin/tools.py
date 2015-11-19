@@ -7,6 +7,7 @@ from binascii import a2b_hex, b2a_hex
 from subprocess import check_output, STDOUT
 from flask import json
 from M2Crypto import X509
+from pyasn1.codec.der import decoder
 
 PUBKEY_HASH = 0
 TESTNET_PUBKEY_HASH = 111
@@ -70,8 +71,8 @@ def public_key_to_btc_address(public_key, v='main'):
     return hash_160_to_btc_address(h160, v)
 
 
-# ToDO: Change the function to use pyasn1 instead of asn1tinydecoder
-def get_pub_key_hex(public_key):
+# Old function using asn1tinydecoder
+def old_get_pub_key_hex(public_key):
     """ Gets a public key in hexadecimal format from a OpenSSL public key object.
 
     :param public_key: public key.
@@ -83,6 +84,32 @@ def get_pub_key_hex(public_key):
     root = asn1_node_root(der)
     key = b2a_hex(asn1_get_value(der, asn1_node_next(der, asn1_node_first_child(der, root))))
     return key[2:]
+
+def get_pub_key_hex(public_key):
+    """ Gets a public key in hexadecimal format from a OpenSSL public key object.
+
+    :param public_key: public key.
+    :type public_key: OpenSSL.PublicKey
+    :return: public key.
+    :rtype: hex str
+    """
+
+    # Get the asn1 representation of the public key DER data. The data is encoded and decoded from base64 because otherwise the decoder reach a Bad Octet error.
+    b64_der = base64.b64encode(public_key.get_der())
+    asn1_pk, _ = decoder.decode(base64.b64decode(b64_der))
+
+    # Get the public key as a BitString. The public key corresponds to the second component of the asn1 public key structure
+    pk = asn1_pk.getComponentByPosition(1)
+
+    # Convert the BitString into a String
+    pk_str = ""
+    for i in range(len(pk)):
+        pk_str += str(pk[i])
+
+    # Parse the data to get it in the desired form.
+    key = '0' + hex(int(pk_str, 2))[2:-1]
+
+    return key
 
 
 # ToDO: Find a way to get the SK without a system call

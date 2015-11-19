@@ -45,46 +45,13 @@ RAND_SIZE = int(config.get("Misc", "RandomSize"))
 CERT_COUNT = int(config.get("Misc", "CertCount"))
 
 
-def get_mixing_utxo(data_path, amount, fee):
-    # Get the current bitcoin address
-    bitcoin_address = btc_address_from_cert(data_path + CERT)
-
-    # Get the address current balance
-    address_balance = get_balance(bitcoin_address)
-
-    # Get the address utxo set
-    utxo_set = blockr_unspent(bitcoin_address, 'testnet')
-
-    transaction_hash = None
-
-    if address_balance == amount + fee and len(utxo_set) is 1:
-        # Case 0. If the address balance is exactly amount + fee the only way to perform the transaction is if there is only one utxo. Otherwise, some balance would be expended to
-        # create a utxo with amount + fee and the total balance will be reduced, concluding in a balance < amount + fee.
-        transaction_hash = utxo_set[0].get("output")
-    elif address_balance > amount + fee:
-        # If the balance is greater that amount + fee, a utxo with the exact amount ( amount + fee) will be looked for in the utxo pool.
-        utxo_n = None
-        for utxo in utxo_set:
-            if utxo.get("value") == amount + fee:
-                utxo_n = utxo
-                break
-        # Case 2. If it could be found, that will be the utxo to be used.
-        if utxo_n is not None:
-            transaction_hash = utxo_n.get("output")
-
-        # Case 1 and 3. Otherwise, a transaction to create a utxo of amount + fee should be performed, only if the balance is greater that amount + 2 fee.
-        elif address_balance > amount + 2 * fee:
-            transaction_hash, used_tx = reputation_transfer(data_path + S_KEY, bitcoin_address, bitcoin_address, amount + fee, fee=fee)
-            if transaction_hash is not None:
-                transaction_hash += ":0"
-
-    return transaction_hash
-
-
 class CS(object):
-    def __init__(self, data_path):
+    def __init__(self, data_path, new=False):
         self.data_path = data_path
-        self.btc_address = []
+        if new:
+            self.btc_address = None
+        else:
+            self.btc_address = btc_address_from_cert(self.data_path + CERT)
 
     # Generates the CS EC keys.
     def generate_keys(self):
@@ -101,17 +68,16 @@ class CS(object):
         # Generate the bitcoin address from the public key
         public_key_hex = get_pub_key_hex(ec.pub())
         bitcoin_address = public_key_to_btc_address(public_key_hex, 'test')
-        self.btc_address.append(bitcoin_address)
 
         # Save both keys
-        if not path.exists(tmp):
-            mkdir(tmp)
-        ec.save_key(tmp + bitcoin_address + '_key.pem', None)
-        ec.save_pub_key(tmp + bitcoin_address + '_public_key.pem')
+        if not path.exists(self.data_path + tmp):
+            mkdir(self.data_path + tmp)
+        ec.save_key(self.data_path + tmp + bitcoin_address + '_key.pem', None)
+        ec.save_pub_key(self.data_path + tmp + bitcoin_address + '_public_key.pem')
 
         # Create the WIF file
-        wif = private_key_to_wif(get_priv_key_hex(tmp + bitcoin_address + '_key.pem'), 'image', 'test')
-        wif.save(tmp + bitcoin_address + "_WIF.png")
+        wif = private_key_to_wif(get_priv_key_hex(self.data_path + tmp + bitcoin_address + '_key.pem'), 'image', 'test')
+        wif.save(self.data_path + tmp + bitcoin_address + "_WIF.png")
 
         return pk, bitcoin_address
 
@@ -119,6 +85,7 @@ class CS(object):
 
         if pkey is None and btc_address is None:
             pkey, btc_address = self.generate_keys()
+            self.btc_address = btc_address
 
         issuer = aca_cert.get_issuer()
 
@@ -170,9 +137,9 @@ class CS(object):
 
         return asn1_cert, cert_hash
 
-    def generate_new_identity(self, btc_addr, new_btc_addr, new_pk, filename='paysense'):
+    def generate_new_identity(self, new_btc_addr, new_pk, filename='paysense'):
 
-        new_dir = "old/" + btc_addr + "/"
+        new_dir = "old/" + self.btc_address + "/"
 
         # Create an 'old' directory if it doesn't exist
         if not path.exists(self.data_path + 'old'):
@@ -184,9 +151,10 @@ class CS(object):
 
         # Move all the old data to its new directory
         rename(self.data_path + "private", self.data_path + new_dir + "private")
-        rename(self.data_path + btc_addr, self.data_path + new_dir + btc_addr)
         rename(self.data_path + filename + ".crt", self.data_path + new_dir + filename + ".crt")
         rename(self.data_path + filename + "_public.key", self.data_path + new_dir + filename + "_public.key")
+        if path.exists(self.data_path + self.btc_address):
+            rename(self.data_path + self.btc_address, self.data_path + new_dir + self.btc_address)
 
         aca_cert_text = b64decode(urlopen(ACA + '/get_ca_cert').read())
         aca_cert = X509.load_cert_string(aca_cert_text)
@@ -198,11 +166,12 @@ class CS(object):
             mkdir(self.data_path + 'private')
 
         # Create the new identity files
-        rename(self.data_path + new_btc_addr + "_key.pem", self.data_path + "private/" + filename + ".key")
-        rename(self.data_path + new_btc_addr + "_public_key.pem", self.data_path + filename + "_public.key")
-        rename(self.data_path + new_btc_addr + "_WIF.png", self.data_path + "private/wif_qr.png")
+        rename(self.data_path + tmp + new_btc_addr + "_key.pem", self.data_path + "private/" + filename + ".key")
+        rename(self.data_path + tmp + new_btc_addr + "_public_key.pem", self.data_path + filename + "_public.key")
+        rename(self.data_path + tmp + new_btc_addr + "_WIF.png", self.data_path + "private/wif_qr.png")
         f = open(self.data_path + new_btc_addr, 'w')
         f.close()
+        rmtree(self.data_path + tmp)
 
         certificate = b64encode(encoder.encode(asn1_cert))
         # Send the final certificate to the ACA
@@ -282,19 +251,19 @@ class CS(object):
                         # Rename and move the keys associated with the chosen bitcoin address
                         if not path.exists(self.data_path + "/private"):
                             mkdir(self.data_path + "private")
-                        rename(tmp + self.btc_address + "_key.pem", self.data_path + "/private/paysense.key")
-                        rename(tmp + self.btc_address + "_public_key.pem", self.data_path + "paysense_public.key")
-                        rename(tmp + self.btc_address + "_WIF.png", self.data_path + "private/wif_qr.png")
+                        rename(self.data_path + tmp + self.btc_address + "_key.pem", self.data_path + "/private/paysense.key")
+                        rename(self.data_path + tmp + self.btc_address + "_public_key.pem", self.data_path + "paysense_public.key")
+                        rename(self.data_path + tmp + self.btc_address + "_WIF.png", self.data_path + "private/wif_qr.png")
 
                         # Delete the temp folder and all the other keys
-                        rmtree(tmp)
+                        rmtree(self.data_path + tmp)
 
                         # Store the certificate
                         der_cert = encoder.encode(certs[p])
                         store_certificate(der_cert, self.data_path + filename)
 
                         # Send the final certificate to the ACA
-                        data = {'certificate': der_cert, 'bitcoin_address': self.btc_address}
+                        data = {'certificate': b64encode(der_cert), 'bitcoin_address': self.btc_address}
                         response = post(ACA + "/store_certificate", data=dumps(data), headers=headers)
 
                         return response
@@ -310,8 +279,6 @@ class CS(object):
     # Reports the data gathered by the CS
     def report_data(self, message, certificate=False):
 
-        bitcoin_address = btc_address_from_cert(self.data_path + CERT)
-
         # Load CS private key
         ec = EC.load_key(self.data_path + S_KEY)
 
@@ -319,7 +286,7 @@ class CS(object):
         signature = b64encode(signature)
 
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        data = {'message': message, 'signature': signature, 'bitcoin_address': bitcoin_address}
+        data = {'message': message, 'signature': signature, 'bitcoin_address': self.btc_address}
 
         if certificate is True:
             f = open(self.data_path + CERT, 'r')
@@ -332,21 +299,17 @@ class CS(object):
         return r.status_code, r.reason, r.content
 
     # This test emulates the CS reputation exchange when he doesn't trust any other CS nor the ACA
-    def self_reputation_exchange(self, new_btc_address, bitcoin_address=None, outside_btc_address=None, fee=1000):
+    def self_reputation_exchange(self, new_btc_address, outside_btc_address=None, fee=1000):
 
-        if bitcoin_address is None:
-            bitcoin_address = btc_address_from_cert(self.data_path + CERT)
-
-        address_balance = get_balance(bitcoin_address)
+        address_balance = get_balance(self.btc_address)
 
         if outside_btc_address is not None:
             # ToDo: Perform a proper way to withdraw reputation
             reputation_withdraw = (float(randint(2, 5)) / 100) * address_balance
-            result = reputation_transfer(self.data_path + S_KEY, bitcoin_address, new_btc_address, address_balance, outside_btc_address, int(reputation_withdraw) - fee, fee)
+            tx_hash, _ = reputation_transfer(self.data_path + S_KEY, self.btc_address, new_btc_address, address_balance, outside_btc_address, int(reputation_withdraw) - fee, fee)
         else:
-            result = reputation_transfer(self.data_path + S_KEY, bitcoin_address, new_btc_address, address_balance - fee, fee=fee)
+            tx_hash, _ = reputation_transfer(self.data_path + S_KEY, self.btc_address, new_btc_address, address_balance - fee, fee=fee)
 
-        print result
         response = urlopen(ACA + '/reputation_exchange?new_btc_address=' + new_btc_address)
 
         return response
@@ -360,7 +323,7 @@ class CS(object):
 
         if mixing_amount == amount:
 
-            utxo = get_mixing_utxo(self.data_path, amount, fee)
+            utxo = self.get_mixing_utxo(amount, fee)
 
             if utxo is not None:
 
@@ -391,9 +354,9 @@ class CS(object):
                     print "Output correctly sent. Resetting tor connection"
                     controller.new_circuit()
 
-                    timer = loads(response).get("data")
-                    print "Waiting " + timer + " for sending the input"
-                    sleep(float(timer))
+                    timer = float(loads(response).get("data"))
+                    print "Waiting " + str(timer) + " for sending the input"
+                    sleep(timer)
 
                     # Send reputation exchange input
                     data = dumps({'inputs': mixing_input})
@@ -403,20 +366,19 @@ class CS(object):
                         print "Input correctly sent. Resetting tor connection"
                         controller.new_circuit()
 
-                        timer = loads(response).get("data")
-                        print "Waiting " + timer + " for getting the tx to be signed"
-                        sleep(float(timer))
+                        timer = float(loads(response).get("data"))
+                        print "Waiting " + str(timer) + " for getting the tx to be signed"
+                        sleep(timer)
 
                         # Get tx hash to sign it
                         code, response = tor_query(tor_server + '/signatures')
 
                         if code is 200:
                             private_key_hex = get_priv_key_hex(self.data_path + S_KEY)
-                            bitcoin_address = btc_address_from_cert(self.data_path + CERT)
                             public_key = EC.load_pub_key(self.data_path + P_KEY)
                             public_key_hex = get_pub_key_hex(public_key.pub())
 
-                            signature, index = get_tx_signature(response, private_key_hex, bitcoin_address)
+                            signature, index = get_tx_signature(response, private_key_hex, self.btc_address)
 
                             data = {'signature': signature, 'index': index, 'public_key': public_key_hex}
                             data = dumps({'data': data})
@@ -424,9 +386,9 @@ class CS(object):
                             code, response = tor_query(tor_server + "/signatures", 'POST', data, headers)
 
                             if code is 200:
-                                timer = loads(response).get("data")
-                                print "Waiting " + timer + " for getting the tx pushing confirmation"
-                                sleep(float(timer) * 1.1)
+                                timer = float(loads(response).get("data"))
+                                print "Waiting " + str(timer) + " for the transaction to be completed"
+                                sleep(timer)
                                 confirmed = False
 
                                 while not confirmed:
@@ -434,23 +396,74 @@ class CS(object):
                                     data = loads(response)
                                     confirmed = bool(data.get("confirmation"))
                                     timer = float(data.get("time"))
+                                    print "Waiting " + str(timer) + " for the transaction correctness confirmation"
                                     sleep(timer)
 
-                                self.generate_new_identity(bitcoin_address, new_btc_addr, new_btc_addr_pk)
+                                print "Transaction confirmed"
+                                self.generate_new_identity(new_btc_addr, new_btc_addr_pk)
                                 data = loads(response).get("data")
-                                return data
-
+                                result = data
+                            else:
+                                try:
+                                    data = loads(response).get("data")
+                                    result = data
+                                except ValueError:
+                                    result = "Error sending signatures. " + str(response)
                         else:
-                            data = loads(response).get("data")
-                            return data
-
+                            try:
+                                data = loads(response).get("data")
+                                result = data
+                            except ValueError:
+                                result = "Error getting signatures. " + str(response)
                     else:
-                        data = loads(response).get("data")
-                        return data
+                        try:
+                            data = loads(response).get("data")
+                            result = data
+                        except ValueError:
+                            result = "Error sending inputs. " + str(response)
                 else:
-                    data = loads(response).get("data")
-                    return data
+                    try:
+                        data = loads(response).get("data")
+                        result = data
+                    except ValueError:
+                        result = "Error sending outputs. " + str(response)
+
             else:
-                return "You have not enough reputation to perform a reputation exchange. Minimum amount: " + str(amount) + " + " + str(fee) + " (transaction fee)."
+                result = "You have not enough reputation to perform a reputation exchange. Minimum amount: " + str(amount) + " + " + str(fee) + " (transaction fee)."
         else:
-            return "The mixing server does not provide a mixing process for the chosen reputation amount"
+            result = "The mixing server does not provide a mixing process for the chosen reputation amount"
+
+        return result
+
+    def get_mixing_utxo(self, amount, fee):
+
+        # Get the address current balance
+        address_balance = get_balance(self.btc_address)
+
+        # Get the address utxo set
+        utxo_set = blockr_unspent(self.btc_address, 'testnet')
+
+        transaction_hash = None
+
+        if address_balance == amount + fee and len(utxo_set) is 1:
+            # Case 0. If the address balance is exactly amount + fee the only way to perform the transaction is if there is only one utxo. Otherwise, some balance would be expended to
+            # create a utxo with amount + fee and the total balance will be reduced, concluding in a balance < amount + fee.
+            transaction_hash = utxo_set[0].get("output")
+        elif address_balance > amount + fee:
+            # If the balance is greater that amount + fee, a utxo with the exact amount ( amount + fee) will be looked for in the utxo pool.
+            utxo_n = None
+            for utxo in utxo_set:
+                if utxo.get("value") == amount + fee:
+                    utxo_n = utxo
+                    break
+            # Case 2. If it could be found, that will be the utxo to be used.
+            if utxo_n is not None:
+                transaction_hash = utxo_n.get("output")
+
+            # Case 1 and 3. Otherwise, a transaction to create a utxo of amount + fee should be performed, only if the balance is greater that amount + 2 fee.
+            elif address_balance >= amount + 2 * fee:
+                transaction_hash, used_tx = reputation_transfer(self.data_path + S_KEY, self.btc_address, self.btc_address, amount + fee, fee=fee)
+                if transaction_hash is not None:
+                    transaction_hash += ":0"
+
+        return transaction_hash

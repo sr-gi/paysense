@@ -17,7 +17,7 @@ stage = "outputs"
 mixing_amount = 10000
 server_address = None
 
-stage_time = 60.0 * 5
+stage_time = 30.0 * 2 * 5
 last_update = 0
 
 outputs = []
@@ -142,7 +142,11 @@ def get_confirmation():
         else:
             timer = str(abs(stage_time - (time() - last_update)))
 
-        return json.dumps({'confirmation': str(confirmed), 'time': timer})
+        message = json.dumps({'confirmation': str(confirmed), 'time': timer})
+
+    else:
+        message = json.dumps({'data': "Stage closed.\n"}), 500
+    return message
 
 
 def reset_arrays():
@@ -210,9 +214,9 @@ def change_stage():
             # Wait for the inputs to be confirmed
             # Check if there are utxo unconfirmed yet
             if len(unconfirmed) is not 0:
-                for utxo in unconfirmed:
-                    if get_tx_info(utxo)['confirmations'] >= 6:
-                        unconfirmed.pop(utxo)
+                for i in range(len(unconfirmed)):
+                    if get_tx_info(unconfirmed[i])['confirmations'] >= 6:
+                        unconfirmed.pop(i)
 
             if len(unconfirmed) is 0:
                 confirmed = True

@@ -1,4 +1,4 @@
-from bitcoinrpc.authproxy import AuthServiceProxy
+from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 
 import tools
 from bitcoin import *
@@ -50,7 +50,7 @@ def reputation_transfer(s_key, source_btc_address, destination_btc_address, amou
     else:
         used_txs = []
 
-    necessary_amount, total_btc = tools.get_necessary_amount(unspent_transactions, amount + fee, 'small')
+    necessary_amount, total_btc = tools.get_necessary_amount(unspent_transactions, amount + fee, 'big')
 
     # Build the output of the payment
     if total_btc is not 0:
@@ -287,7 +287,7 @@ def check_txs_source(btc_address, dcs_address, certs_path):
     :type dcs_address: str
     :param certs_path: path to the folder in which the certificates are stored.
     :type certs_path: str
-    :return: Ture if the sources are valid. False otherwise.
+    :return: True if the sources are valid. False otherwise.
     :rtype: bool
     """
     txs_history = history_testnet(btc_address)
@@ -295,17 +295,17 @@ def check_txs_source(btc_address, dcs_address, certs_path):
 
     for i in range(len(txs_history)):
         src = txs_history[i].get("from")
-        if len(src) is 1:
-            if i is 0:
-                # ToDo: Check "check_certificate" ToDo.
-                if src[0] != dcs_address and not check_certificate(btc_address, certs_path):
+        to = txs_history[i].get("to")
+        if btc_address in to:
+            if len(src) is 1:
+                if i is 0:
+                    # ToDo: Check "check_certificate" ToDo.
+                    if src[0] != dcs_address and src[0] != btc_address and not check_certificate(src[0], certs_path):
+                        response = False
+                elif src[0] != dcs_address and src[0] != btc_address:
                     response = False
             else:
-                if src == dcs_address:
-
-                    response = False
-        else:
-            response = False
+                response = False
 
     return response
 
@@ -328,7 +328,12 @@ def local_push(tx, rpc_user=None, rpc_password=None):
 
     rpc_connection = AuthServiceProxy("http://"+rpc_user+":"+rpc_password+"@127.0.0.1:18332")
 
-    response = rpc_connection.sendrawtransaction(tx)
+    try:
+        response = rpc_connection.sendrawtransaction(tx)
+        print "Transaction broadcast " + response
+    except JSONRPCException as e:
+        print e.message
+        response = None
 
     return response
 
