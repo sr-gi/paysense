@@ -124,19 +124,19 @@ def api_receive_data():
 
 
 if __name__ == '__main__':
-    app.run()
+    #app.run()
 
-    # _, used_txs = pay_to_cs("mgGaUV7c94RPH5XrB9GsNyKZ3KZjobWNbm", 11000)
+    # _, used_txs = pay_to_cs("mwfCfJnqJkq2TrNpnYso7rTzWjnUahSds6", 11000)
+    #
+    # _, used_txs = pay_to_cs("mgM6E2kFyJ5noR4sz7idwip4FtT26MzJ6K", 6000, used_txs)
+    # _, used_txs = pay_to_cs("mgM6E2kFyJ5noR4sz7idwip4FtT26MzJ6K", 6000, used_txs)
 
-    # _, used_txs = pay_to_cs("mm2NUowTdxTqqi4En621vosrJqc1a98CVQ", 6000, used_txs)
-    # _, used_txs = pay_to_cs("mm2NUowTdxTqqi4En621vosrJqc1a98CVQ", 6000, used_txs)
+    _, used_txs = pay_to_cs("mkMayymgf24fGMtaky8ermdCrmhd1gzjrf", 11000)
+    _, used_txs = pay_to_cs("mkMayymgf24fGMtaky8ermdCrmhd1gzjrf", 5000, used_txs)
 
-    # _, used_txs = pay_to_cs("mvM6D8j5UFMwSJ9eECDQqTXdn79iuuR6jr", 11000, used_txs)
-    # _, used_txs = pay_to_cs("mvM6D8j5UFMwSJ9eECDQqTXdn79iuuR6jr", 5000, used_txs)
-
-    # _, used_txs = pay_to_cs("mwd8R6dNMp9GdrmxNdrG1ZiBjyRi6KLSUo", 5000, used_txs)
-    # _, used_txs = pay_to_cs("mwd8R6dNMp9GdrmxNdrG1ZiBjyRi6KLSUo", 5000, used_txs)
-    # _, used_txs = pay_to_cs("mwd8R6dNMp9GdrmxNdrG1ZiBjyRi6KLSUo", 5000, used_txs)
+    _, used_txs = pay_to_cs("mjdZ4uQSpbmN5VmxLG4cp225SpEsP4nkA2", 5000, used_txs)
+    _, used_txs = pay_to_cs("mjdZ4uQSpbmN5VmxLG4cp225SpEsP4nkA2", 5000, used_txs)
+    _, used_txs = pay_to_cs("mjdZ4uQSpbmN5VmxLG4cp225SpEsP4nkA2", 5000, used_txs)
 
 
 

@@ -157,8 +157,8 @@ def history_testnet(btc_address):
         data = response.get('data')
         txs = data.get('txs')
 
-        for i in range(len(txs)):
-            history.append(get_tx_info(txs[i].get('tx')))
+        for tx in reversed(txs):
+            history.append(get_tx_info(tx.get('tx')))
 
     return history
 
@@ -296,16 +296,25 @@ def check_txs_source(btc_address, dcs_address, certs_path):
     for i in range(len(txs_history)):
         src = txs_history[i].get("from")
         to = txs_history[i].get("to")
+        # If the address that we are checking is the destination of a transaction
         if btc_address in to:
-            if len(src) is 1:
-                if i is 0:
-                    # ToDo: Check "check_certificate" ToDo.
-                    if src[0] != dcs_address and src[0] != btc_address and not check_certificate(src[0], certs_path):
-                        response = False
-                elif src[0] != dcs_address and src[0] != btc_address:
+            # If is the first transaction in the address history it could come from previously certified CS or from the DCS
+            if i is 0:
+                # ToDo: Check "check_certificate" ToDo.
+                certified_cs = []
+                for address in src:
+                    if address != dcs_address:
+                        certified_cs.append(check_certificate(address, certs_path))
+
+                if False in certified_cs:
                     response = False
+            # If is not the first transaction, it could only come from one source, that must be the DCS or the same CS
             else:
-                response = False
+                if len(src) is 1:
+                    if src[0] != dcs_address and src[0] != btc_address:
+                        response = False
+                else:
+                    response = False
 
     return response
 

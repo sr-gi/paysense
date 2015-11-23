@@ -1,7 +1,6 @@
 import qrcode
 import transactions
 from bitcoin import *
-from asn1tinydecoder import *
 from base58 import b58encode
 from binascii import a2b_hex, b2a_hex
 from subprocess import check_output, STDOUT
@@ -70,20 +69,6 @@ def public_key_to_btc_address(public_key, v='main'):
     h160 = hash_160(public_key)
     return hash_160_to_btc_address(h160, v)
 
-
-# Old function using asn1tinydecoder
-def old_get_pub_key_hex(public_key):
-    """ Gets a public key in hexadecimal format from a OpenSSL public key object.
-
-    :param public_key: public key.
-    :type public_key: OpenSSL.PublicKey
-    :return: public key.
-    :rtype: hex str
-    """
-    der = public_key.get_der()
-    root = asn1_node_root(der)
-    key = b2a_hex(asn1_get_value(der, asn1_node_next(der, asn1_node_first_child(der, root))))
-    return key[2:]
 
 def get_pub_key_hex(public_key):
     """ Gets a public key in hexadecimal format from a OpenSSL public key object.

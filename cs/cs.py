@@ -185,7 +185,7 @@ class CS(object):
 
     # CS registration
     def registration(self, filename='paysense'):
-        certs, certs_der, cert_hashes, blinded_hashes, rands = [], [], [], [], []
+        certs, certs_der, cert_hashes, blinded_hashes, btc_addresses,rands = [], [], [], [], [], []
 
         # Create the directories if they don't exist already
         if not path.exists(self.data_path):
@@ -202,7 +202,9 @@ class CS(object):
 
             # Generate the basic certificates
             for i in range(CERT_COUNT):
-                cert, cert_hash = self.generate_certificate(aca_cert)
+                pkey, btc_address = self.generate_keys()
+                cert, cert_hash = self.generate_certificate(aca_cert, btc_address, pkey)
+                btc_addresses.append(btc_address)
                 certs.append(cert)
                 cert_hashes.append(cert_hash)
 
@@ -246,7 +248,7 @@ class CS(object):
                         certs[p].setComponentByName("signatureValue", bin_signature)
 
                         # Set the bitcoin address to the chosen one
-                        self.btc_address = self.btc_address[p]
+                        self.btc_address = btc_addresses[p]
 
                         # Rename and move the keys associated with the chosen bitcoin address
                         if not path.exists(self.data_path + "/private"):
@@ -266,13 +268,11 @@ class CS(object):
                         data = {'certificate': b64encode(der_cert), 'bitcoin_address': self.btc_address}
                         response = post(ACA + "/store_certificate", data=dumps(data), headers=headers)
 
-                        return response
                     else:
-                        return "Invalid certificate signature"
-                else:
-                    return response
-            else:
-                return response
+                        response = "Invalid certificate signature"
+
+            return response
+
         except URLError as e:
             return e
 
@@ -310,9 +310,9 @@ class CS(object):
         else:
             tx_hash, _ = reputation_transfer(self.data_path + S_KEY, self.btc_address, new_btc_address, address_balance - fee, fee=fee)
 
-        response = urlopen(ACA + '/reputation_exchange?new_btc_address=' + new_btc_address)
-
-        return response
+        # response = urlopen(ACA + '/reputation_exchange?new_btc_address=' + new_btc_address)
+        #
+        # return response
 
     def coinjoin_reputation_exchange(self, amount, fee=1000):
 

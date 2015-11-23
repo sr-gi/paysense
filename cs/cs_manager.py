@@ -53,23 +53,17 @@ def certification_test(count=1000):
 
 
 def main():
-    #pass
-    for i in range(4):
-        cs = CS("CSs/REP_EX_"+str(i)+"/")
-        t = threading.Thread(target=cs.coinjoin_reputation_exchange, args=(10000,))
-        t.start()
-
-    # for i in [3]:
+    pass
+    # for i in range(4):
     #     cs = CS("CSs/REP_EX_"+str(i)+"/")
-    #     #cs.registration()
+    #     t = threading.Thread(target=cs.coinjoin_reputation_exchange, args=(10000,))
+    #     t.start()
+
+    # for i in range(4):
+    #     cs = CS("CSs/_REP_EX_"+str(i)+"/", new=True)
+    #     cs.registration()
     #     cs.self_reputation_exchange("mjZJ8ovUXKv6D4GPM91Vq5sGW9AnhSo4dL")
 
-    # from M2Crypto import EVP
-    # data_dir = "CSs/CS_"+str(0)+"/"
-    # btc_addr = "mggkyV56bGXY94zfBcpqj4ozLFbQmXj2qt"
-    # pk = EVP.load_key(data_dir + "_tmp/" + btc_addr + "_key.pem")
-    # cs = CS(data_dir)
-    # cs.generate_new_identity(btc_addr, pk)
 
 if __name__ == '__main__':
     main()

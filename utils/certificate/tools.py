@@ -45,7 +45,7 @@ def check_blind_hash(cert_der, blinded_hash, r, ca_cert):
     :param r: blinding factor used to perform the blind hash.
     :type r: long
     :param ca_cert: CA cert. It will be used to extract the public key and perform the hash blinding.
-    :type ca_cert: M2Crypto.X509
+    :type ca_cert: M2Crypto.X509()
     :return: True if the hashes match, False otherwise.
     :rtype: bool
     """

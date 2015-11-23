@@ -6,7 +6,6 @@ from utils.tor.tools import init_tor
 from flask import Flask, request, json
 from bitcoin import mktx, blockr_pushtx
 from time import time
-from os import getcwd
 
 from utils.bitcoin.transactions import insert_tx_signature, get_tx_info, check_txs_source, is_spent, local_push
 
@@ -17,7 +16,7 @@ stage = "outputs"
 mixing_amount = 10000
 server_address = None
 
-stage_time = 30.0 * 2 * 5
+stage_time = 60.0 * 20
 last_update = 0
 
 outputs = []
@@ -33,9 +32,7 @@ config = ConfigParser.ConfigParser()
 config.read("paysense.conf")
 
 # ToDo: Check this
-cwd = getcwd()
-CS_CERTS_PATH = getcwd() + config.get("Paths", "CERTS_PATH", )
-a = cwd + CS_CERTS_PATH
+CS_CERTS_PATH = config.get("Paths", "CERTS_PATH", )
 DCS_BTC_ADDRESS = config.get("BitcoinAddresses", "DCS", )
 
 
