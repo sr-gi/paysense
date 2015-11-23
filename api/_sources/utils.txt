@@ -1,8 +1,0 @@
-utils package
-=============
-
-.. toctree::
-
-    utils.bitcoin
-    utils.certificate
-    utils.tor
