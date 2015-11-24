@@ -310,9 +310,9 @@ class CS(object):
         else:
             tx_hash, _ = reputation_transfer(self.data_path + S_KEY, self.btc_address, new_btc_address, address_balance - fee, fee=fee)
 
-        # response = urlopen(ACA + '/reputation_exchange?new_btc_address=' + new_btc_address)
-        #
-        # return response
+        response = urlopen(ACA + '/reputation_exchange?new_btc_address=' + new_btc_address)
+
+        return response
 
     def coinjoin_reputation_exchange(self, amount, fee=1000):
 

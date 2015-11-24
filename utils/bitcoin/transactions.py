@@ -50,7 +50,7 @@ def reputation_transfer(s_key, source_btc_address, destination_btc_address, amou
     else:
         used_txs = []
 
-    necessary_amount, total_btc = tools.get_necessary_amount(unspent_transactions, amount + fee, 'big')
+    necessary_amount, total_btc = tools.get_necessary_amount(unspent_transactions, amount + fee, 'small')
 
     # Build the output of the payment
     if total_btc is not 0:
@@ -73,9 +73,8 @@ def reputation_transfer(s_key, source_btc_address, destination_btc_address, amou
 
         if fee is not 0:
             # ToDo: Change this once the problems with the blockr API has been solved
-            #code, reason, tx_hash = push_tx(tx, fee=True)
-            tx_hash = local_push(tx)
-            code = 200
+            code, reason, tx_hash = push_tx(tx, fee=True)
+            # tx_hash = local_push(tx)
         else:
             code, reason, tx_hash = push_tx(tx)
 
@@ -242,7 +241,7 @@ def get_tx_signature(tx, private_key, btc_address, hashcode=SIGHASH_ALL):
         prev_tx_hash = tx_in['outpoint']['hash']
         prev_tx_info = get_tx_info(prev_tx_hash)
         if btc_address in prev_tx_info['to']:
-            index = tx_obj['ins'].index(tx_in)
+            index = prev_tx_info['to'].index(btc_address)
 
     if index is not None:
         signing_tx = signature_form(tx, index, mk_pubkey_script(btc_address), hashcode)

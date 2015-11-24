@@ -13,10 +13,10 @@ __author__ = "sdelgado"
 app = Flask(__name__)
 
 stage = "outputs"
-mixing_amount = 10000
+mixing_amount = 9000
 server_address = None
 
-stage_time = 60.0 * 20
+stage_time = 60.0
 last_update = 0
 
 outputs = []
@@ -197,11 +197,8 @@ def change_stage():
             stage = "outputs"
     elif stage == "confirm":
         if confirmed:
-            # ToDo: Change this once the problems with the blockr API has been solved
-            #result = blockr_pushtx(tx, 'testnet')
-            result = local_push(tx)
-            print result
-            print "Transaction correctly published"
+            result = blockr_pushtx(tx, 'testnet')
+            #result = local_push(tx)
 
             # End of the mixing, starting the process again
             reset_arrays()
@@ -211,9 +208,9 @@ def change_stage():
             # Wait for the inputs to be confirmed
             # Check if there are utxo unconfirmed yet
             if len(unconfirmed) is not 0:
-                for i in range(len(unconfirmed)):
-                    if get_tx_info(unconfirmed[i])['confirmations'] >= 6:
-                        unconfirmed.pop(i)
+                for tx in unconfirmed:
+                    if get_tx_info(tx)['confirmations'] >= 6:
+                        unconfirmed.remove(tx)
 
             if len(unconfirmed) is 0:
                 confirmed = True

@@ -230,8 +230,12 @@ def get_necessary_amount(unspent_transactions, amount, size='small'):
 
         # Get all the values from the unspent transactions
         values = []
-        for transaction in unspent_bitcoins:
-            values.append(transaction.get("value"))
+        for tx in unspent_bitcoins:
+            tx_value = tx.get("value")
+            if tx_value != 0:
+                values.append(tx_value)
+            else:
+                unspent_bitcoins.remove(tx)
 
         necessary_amount = []
 

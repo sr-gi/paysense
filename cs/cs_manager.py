@@ -54,16 +54,6 @@ def certification_test(count=1000):
 
 def main():
     pass
-    # for i in range(4):
-    #     cs = CS("CSs/REP_EX_"+str(i)+"/")
-    #     t = threading.Thread(target=cs.coinjoin_reputation_exchange, args=(10000,))
-    #     t.start()
-
-    # for i in range(4):
-    #     cs = CS("CSs/_REP_EX_"+str(i)+"/", new=True)
-    #     cs.registration()
-    #     cs.self_reputation_exchange("mjZJ8ovUXKv6D4GPM91Vq5sGW9AnhSo4dL")
-
 
 if __name__ == '__main__':
     main()
