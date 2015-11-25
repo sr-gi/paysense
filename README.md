@@ -1,5 +1,4 @@
 # PaySense
 PaySense python implementation
 
-Utils package documentation could be found in deic-projectes.uab.cat/paysense
-
+Utils package documentation could be found in [here](http://deic-projectes.uab.cat/paysense)
