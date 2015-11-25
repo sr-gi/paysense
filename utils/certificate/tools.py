@@ -1,3 +1,6 @@
+# Copyright (c) <2015> <Sergi Delgado Segura>
+# Distributed under the BSD software license, see the accompanying file LICENSE
+
 from pyasn1.codec.der import encoder, decoder
 from pyasn1_modules.rfc2459 import Certificate
 from Crypto.PublicKey import RSA

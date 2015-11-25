@@ -1,3 +1,6 @@
+# Copyright (c) <2015> <Sergi Delgado Segura>
+# Distributed under the BSD software license, see the accompanying file LICENSE
+
 from base64 import b64encode, b64decode
 from os import path
 import ConfigParser

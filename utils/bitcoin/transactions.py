@@ -1,3 +1,6 @@
+# Copyright (c) <2015> <Sergi Delgado Segura>
+# Distributed under the BSD software license, see the accompanying file LICENSE
+
 from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 
 import tools
@@ -327,21 +330,20 @@ def local_push(tx, rpc_user=None, rpc_password=None):
     :type rpc_user: str
     :param rpc_password: rpc password ((could be set in bitcoin.conf).
     :type rpc_password: str
-    :return: The response of the rpc server, corresponding to the transaction id if it has ben correctly pushed
+    :return: The response of the rpc server, corresponding to the transaction id and a 200 code if its correctly pushed. None and code 500 otherwise
+    :rtype: str, int
     """
-    # Just for testing, having some problems with blockr push_tx
-    if rpc_user is None and rpc_password is None:
-        rpc_user = "sr_gi"
-        rpc_password = "Aqx1xL47eZiKN8v5XjNaJawbmmaMwUKHyTTWEHzrvUbD"
 
     rpc_connection = AuthServiceProxy("http://"+rpc_user+":"+rpc_password+"@127.0.0.1:18332")
 
     try:
-        response = rpc_connection.sendrawtransaction(tx)
-        print "Transaction broadcast " + response
+        tx_hash = rpc_connection.sendrawtransaction(tx)
+        code = 200
+        print "Transaction broadcast " + tx_hash
     except JSONRPCException as e:
         print e.message
-        response = None
+        tx_hash = None
+        code = 500
 
-    return response
+    return tx_hash, code
 

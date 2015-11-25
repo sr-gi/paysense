@@ -1,3 +1,6 @@
+# Copyright (c) <2015> <Sergi Delgado Segura>
+# Distributed under the BSD software license, see the accompanying file LICENSE
+
 from ConfigParser import ConfigParser
 from urllib2 import urlopen, URLError
 from hashlib import sha256

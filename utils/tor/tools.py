@@ -1,3 +1,6 @@
+# Copyright (c) <2015> <Sergi Delgado Segura>
+# Distributed under the BSD software license, see the accompanying file LICENSE
+
 import pycurl
 import stem.process
 
